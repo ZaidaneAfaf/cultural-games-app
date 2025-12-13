@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: projetS5
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/boardgames
+      database: boardgames
+
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: mistral
+      embedding:
+        options:
+          model: nomic-embed-text
+
+server:
+  port: 8081
+
+qdrant:
+  grpc:
+    host: localhost
+    port: 6334
+  api-key: ""
+
+rag:
+  collection: boardgames
+  top-k: 5
+
+ollama:
+  host: http://localhost:11434
