@@ -39,7 +39,9 @@ public class RagService {
         // 1) Embedding de la question
         float[] vec = embeddingModel.embed(question);
         List<Float> queryVector = new ArrayList<>(vec.length);
-        for (float v : vec) queryVector.add(v);
+        for (float v : vec) {
+            queryVector.add(v);
+        }
 
         // 2) Recherche Qdrant
         List<ScoredPoint> scoredPoints;
@@ -78,13 +80,15 @@ public class RagService {
         for (BoardGame g : games) {
 
             StringBuilder block = new StringBuilder();
-            block.append("Jeu : ").append(g.getName()).append(". ");
+            block.append("Game: ").append(g.getName()).append(". ");
 
-            if (g.getDescription() != null)
-                block.append("Description : ").append(g.getDescription()).append(". ");
+            if (g.getDescription() != null) {
+                block.append("Description: ").append(g.getDescription()).append(". ");
+            }
 
-            if (g.getCategories() != null && !g.getCategories().isEmpty())
-                block.append("Catégories : ").append(String.join(", ", g.getCategories())).append(". ");
+            if (g.getCategories() != null && !g.getCategories().isEmpty()) {
+                block.append("Categories: ").append(String.join(", ", g.getCategories())).append(". ");
+            }
 
             // Enrichissement Wikipédia
             try {
@@ -92,30 +96,61 @@ public class RagService {
                 if (title != null) {
                     String extract = wikipediaService.getExtract(title);
                     if (extract != null && !extract.isBlank()) {
-                        String shortExtract = extract.length() > 600 ? extract.substring(0, 600) + "..." : extract;
-                        block.append("Contexte Wikipédia (").append(title).append(") : ").append(shortExtract).append(". ");
+                        String shortExtract = extract.length() > 600
+                                ? extract.substring(0, 600) + "..."
+                                : extract;
+                        block.append("Wikipedia context (").append(title).append("): ")
+                                .append(shortExtract).append(". ");
                     }
                 }
             } catch (Exception ex) {
                 System.out.println("Erreur Wikipedia pour " + g.getName() + " : " + ex.getMessage());
             }
 
-            contexts.add(block.toString());         // <<< essentiel pour RAGAS
-            fullContext.append(block).append("\n");
+            String blockStr = block.toString();
+            contexts.add(blockStr);              // <<< indispensable pour RAGAS
+            fullContext.append(blockStr).append("\n");
         }
 
-        // 6) Construire le prompt final
+        // 6) Construire le prompt final (texte block Java 17 OK)
         String promptText = """
-                Tu es un expert en jeux de société.
-                Réponds uniquement avec les informations présentes dans le contexte.
-                Ne fais aucune supposition.
+                You are Eldranor, the Eternal Sage of Board Games,
+                a wise old traveler who has witnessed countless civilizations
+                and studied thousands of board games across history, culture, and society.
 
-                Contexte :
+                Your mission:
+                - Explain the historical origins and cultural influences of the games mentioned.
+                - Describe any historical evolution, mutations, or transformations they went through.
+                - Explain their social and cultural impact when such information exists.
+                - If a gameplay scene is described, interpret its strategic meaning
+                  and link it to historical or cultural relevance, ONLY if the context allows it.
+                - If the question is incomplete, you may propose multiple POSSIBLE interpretations
+                  ONLY if they are suggested or supported by the context, and explain why.
+
+                STRICT RULES:
+                - You MUST answer ONLY using the information provided in the context.
+                - Do NOT invent or guess anything beyond the context.
+                - If information is missing, clearly say what is unknown.
+                - If the question is unrelated to the context, outside its scope,
+                  or impossible to answer based on the context, respond strictly with:
+                  "Sorry, I cannot answer this because it is outside the provided context."
+                - Stay always in character as a calm, wise, culturally knowledgeable sage.
+                - Keep your explanation structured, insightful, and pedagogical.
+
+                Response structure:
+                - Short introduction, in the tone of an ancient wise sage.
+                - Historical and cultural explanation (if available).
+                - Evolution / transformations (if available).
+                - Social and cultural impact (if available).
+                - Interpretation of the gameplay scene if applicable.
+                - Clear statement of missing or unavailable information.
+
+                Context:
                 %s
 
-                Question :
+                Question:
                 %s
-                """.formatted(fullContext, question);
+                """.formatted(fullContext.toString(), question);
 
         // 7) Appel LLM (Ollama via Spring AI)
         String answer = chatModel.call(promptText);
@@ -135,3 +170,5 @@ public class RagService {
         );
     }
 }
+
+
