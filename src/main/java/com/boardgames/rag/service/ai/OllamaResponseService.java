@@ -1,208 +1,74 @@
 package com.boardgames.rag.service.ai;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 public class OllamaResponseService {
 
     private final ChatClient chatClient;
-    private final ExecutorService executorService;
-    private static final int TIMEOUT_SECONDS = 10;
 
-    // Cache des réponses
-    private final Map<String, CachedResponse> responseCache;
-    private final Map<String, Integer> searchCounters;
-    private final int MAX_CACHE_SIZE = 50;
-    private final int POPULAR_THRESHOLD = 3;
+    // 🔥 Configuration des timeouts
+    @Value("${app.prompting.timeout.zero-shot:20}")
+    private int zeroShotTimeout;
+
+    @Value("${app.prompting.timeout.few-shot:25}")
+    private int fewShotTimeout;
+
+    @Value("${app.prompting.timeout.chain-of-thought:30}")
+    private int chainOfThoughtTimeout;
+
+    @Value("${app.prompting.timeout.self-consistency:35}")
+    private int selfConsistencyTimeout;
+
+    @Value("${app.prompting.timeout.meta-prompting:30}")
+    private int metaPromptingTimeout;
+
+    @Value("${app.prompting.templates.few-shot-examples:3}")
+    private int fewShotExamples;
+
+    @Value("${app.prompting.strategies.enabled:true}")
+    private boolean strategiesEnabled;
 
     public OllamaResponseService(ChatClient chatClient) {
         this.chatClient = chatClient;
-        this.executorService = Executors.newCachedThreadPool();
-        this.responseCache = new ConcurrentHashMap<>();
-        this.searchCounters = new ConcurrentHashMap<>();
+    }
+
+    @PostConstruct
+    public void init() {
+        System.out.println("🤖 OllamaResponseService initialisé");
+        System.out.println("⏱️  Timeouts configurés:");
+        System.out.println("   - Zero-Shot: " + zeroShotTimeout + "s");
+        System.out.println("   - Few-Shot: " + fewShotTimeout + "s");
+        System.out.println("   - Chain-of-Thought: " + chainOfThoughtTimeout + "s");
+        System.out.println("   - Self-Consistency: " + selfConsistencyTimeout + "s");
+        System.out.println("   - Meta-Prompting: " + metaPromptingTimeout + "s");
+        System.out.println("   - Stratégies activées: " + strategiesEnabled);
     }
 
     /**
-     * Génère une réponse NATURELLE avec cache intelligent
+     * 🔥 GÉNÉRATION RAPIDE AVEC CONTEXTE JEUX
      */
-    public String generateNaturalResponse(String question, List<Map<String, Object>> gameContext) {
-        String cacheKey = getCacheKey(gameContext);
-        searchCounters.merge(cacheKey, 1, Integer::sum);
-        int searchCount = searchCounters.getOrDefault(cacheKey, 0);
+    public String generateQuickResponse(String question, List<Map<String, Object>> gamesContext) {
+        System.out.println("🤖 [OLLAMA] Génération Zero-Shot avec " + gamesContext.size() + " jeux");
 
-        // Vérifier le cache
-        CachedResponse cached = responseCache.get(cacheKey);
-        if (cached != null && !cached.isExpired()) {
-            long age = System.currentTimeMillis() - cached.timestamp;
-            System.out.println("💾 [CACHE HIT] Réponse récupérée du cache (" + searchCount + " recherches, age: " + age + "ms)");
-            return cached.response;
-        }
+        List<Map<String, Object>> limitedGames = gamesContext.stream()
+                .limit(3)
+                .collect(Collectors.toList());
 
-        System.out.println("🤖 [OLLAMA] Génération réponse naturelle... (recherche #" + searchCount + ")");
-        long startTime = System.currentTimeMillis();
+        String contextText = limitedGames.stream()
+                .map(this::formatGameForPrompt)
+                .collect(Collectors.joining("\n\n"));
 
-        try {
-            CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
-                if (gameContext.isEmpty()) {
-                    return askOllamaDirectly(question);
-                }
-                return askOllamaWithContext(question, gameContext);
-            }, executorService);
-
-            String response = future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
-
-            // FORÇAGE DU FRANÇAIS - Vérifier et corriger si nécessaire
-            response = ensureFrenchResponse(response, question);
-
-            long duration = System.currentTimeMillis() - startTime;
-            System.out.println("⚡ Ollama répondu en " + duration + "ms");
-
-            // Mettre en cache
-            cacheResponse(cacheKey, response, searchCount >= POPULAR_THRESHOLD);
-
-            return response;
-
-        } catch (TimeoutException e) {
-            long duration = System.currentTimeMillis() - startTime;
-            System.err.println("⏰ TIMEOUT Ollama après " + duration + "ms - Utilisation fallback");
-
-            if (!gameContext.isEmpty()) {
-                return generateFallbackResponse(gameContext);
-            }
-
-            return "⏰ La génération de la réponse prend trop de temps. Veuillez réessayer.";
-        } catch (Exception e) {
-            System.err.println("❌ Erreur Ollama: " + e.getMessage());
-            return "❌ Erreur lors de la génération de la réponse. Vérifiez qu'Ollama est bien démarré.";
-        }
-    }
-
-    /**
-     * FORÇAGE DU FRANÇAIS - Vérifie et corrige la langue
-     */
-    private String ensureFrenchResponse(String response, String originalQuestion) {
-        if (response == null || response.trim().isEmpty()) {
-            return response;
-        }
-
-        // Détecter si la réponse est en anglais
-        boolean isEnglish = detectEnglish(response);
-
-        if (isEnglish) {
-            System.out.println("🔄 Détection: Réponse en anglais, regénération en français...");
-
-            // Regénérer en français avec des consignes plus strictes
-            String frenchPrompt = String.format("""
-                TRÈS IMPORTANT : RÉPONDS UNIQUEMENT EN FRANÇAIS. NE UTILISE PAS UN MOT D'ANGLAIS.
-                
-                Question originale : "%s"
-                
-                Ta réponse précédente (à ignorer) : %s
-                
-                Recrée une réponse COMPLÈTEMENT EN FRANÇAIS :
-                - Utilise uniquement la langue française
-                - Pas de mots anglais
-                - Style naturel et conversationnel
-                - 3-4 paragraphes maximum
-                """, originalQuestion, response.substring(0, Math.min(100, response.length())));
-
-            try {
-                String correctedResponse = chatClient.prompt()
-                        .user(frenchPrompt)
-                        .call()
-                        .content();
-
-                // Vérifier à nouveau
-                if (!detectEnglish(correctedResponse)) {
-                    System.out.println("✅ Correction réussie - Réponse maintenant en français");
-                    return correctedResponse;
-                } else {
-                    System.out.println("⚠️  La correction a échoué, utilisation du fallback français");
-                    return generateFrenchFallback(originalQuestion);
-                }
-            } catch (Exception e) {
-                System.err.println("❌ Erreur lors de la correction française: " + e.getMessage());
-                return generateFrenchFallback(originalQuestion);
-            }
-        }
-
-        return response;
-    }
-
-    /**
-     * Détecte si le texte est en anglais
-     */
-    private boolean detectEnglish(String text) {
-        if (text == null) return false;
-
-        String lowerText = text.toLowerCase();
-
-        // Mots clés anglais courants dans les réponses Ollama
-        String[] englishIndicators = {
-                "the", "and", "is", "in", "to", "of", "a", "that", "it", "with",
-                "for", "as", "was", "on", "are", "this", "game", "player", "players",
-                "rules", "strategy", "board", "card", "piece", "move", "win", "play"
-        };
-
-        // Mots clés français pour contre-vérifier
-        String[] frenchIndicators = {
-                "le", "la", "les", "un", "une", "des", "est", "dans", "pour", "avec",
-                "sur", "qui", "que", "jeu", "joueur", "joueurs", "règles", "stratégie",
-                "plateau", "carte", "pièce", "déplacement", "gagner", "jouer"
-        };
-
-        int englishCount = 0;
-        int frenchCount = 0;
-
-        for (String word : englishIndicators) {
-            if (lowerText.contains(" " + word + " ") || lowerText.startsWith(word + " ")) {
-                englishCount++;
-            }
-        }
-
-        for (String word : frenchIndicators) {
-            if (lowerText.contains(" " + word + " ") || lowerText.startsWith(word + " ")) {
-                frenchCount++;
-            }
-        }
-
-        // Si plus d'indicateurs anglais que français, considérer comme anglais
-        return englishCount > frenchCount;
-    }
-
-    /**
-     * Fallback en français garanti
-     */
-    private String generateFrenchFallback(String question) {
-        return "Je ne peux pas fournir une réponse détaillée en français pour le moment. " +
-                "Veuillez réessayer ou consulter les informations disponibles dans notre base de données.";
-    }
-
-    /**
-     * Ollama répond SANS données (pure IA) - Version française renforcée
-     */
-    private String askOllamaDirectly(String question) {
-        String prompt = String.format("""
-            TRÈS IMPORTANT : RÉPONDS UNIQUEMENT EN FRANÇAIS. N'UTILISE AUCUN MOT ANGLAIS.
-            
-            Décris le jeu "%s" EN FRANÇAIS de manière complète :
-            
-            STRUCTURE OBLIGATOIRE (en français) :
-            1. Description et contexte historique
-            2. Règles principales et objectif du jeu  
-            3. Conseils stratégiques de base
-            4. Public cible et durée typique
-            
-            STYLE : Conversationnel, naturel, engageant.
-            LANGUE : Français exclusivement.
-            LONGUEUR : 4-5 paragraphes maximum.
-            
-            COMMENCE DIRECTEMENT TA RÉPONSE EN FRANÇAIS :
-            """, question);
+        String questionType = analyzeQuestionType(question);
+        String prompt = buildAdaptivePrompt(question, contextText, questionType, limitedGames.size());
 
         try {
             String response = chatClient.prompt()
@@ -210,194 +76,358 @@ public class OllamaResponseService {
                     .call()
                     .content();
 
-            return ensureFrenchResponse(response, question);
+            if (response == null || response.trim().isEmpty()) {
+                System.err.println("⚠️ [OLLAMA] Réponse vide reçue");
+                return null;
+            }
+
+            System.out.println("✅ [OLLAMA] Réponse générée (" + response.length() + " caractères)");
+            return response;
+
         } catch (Exception e) {
-            throw new RuntimeException("Ollama error: " + e.getMessage());
+            System.err.println("❌ [OLLAMA] Erreur : " + e.getMessage());
+            throw new RuntimeException("Erreur génération Ollama", e);
         }
     }
 
     /**
-     * Ollama répond AVEC données enrichies - Version française renforcée
+     * 🔥 GÉNÉRATION AVEC FEW-SHOT PROMPTING
      */
-    private String askOllamaWithContext(String question, List<Map<String, Object>> gameContext) {
-        String contextData = formatContextForOllama(gameContext);
+    public String generateWithFewShotPrompting(String question, List<Map<String, Object>> gamesContext) {
+        System.out.println("🎯 [OLLAMA-FEW-SHOT] Génération avec " + fewShotExamples + " exemples");
 
-        String prompt = String.format("""
-            TRÈS IMPORTANT : RÉPONDS UNIQUEMENT EN FRANÇAIS. PAS UN MOT D'ANGLAIS.
-            
-            CONTEXTE DU JEU :
+        String contextText = gamesContext.stream()
+                .limit(2)
+                .map(this::formatGameForPrompt)
+                .collect(Collectors.joining("\n\n"));
+
+        String prompt = buildFewShotPrompt(question, contextText);
+
+        try {
+            return chatClient.prompt()
+                    .user(prompt)
+                    .call()
+                    .content();
+        } catch (Exception e) {
+            System.err.println("❌ [OLLAMA-FEW-SHOT] Erreur: " + e.getMessage());
+            return generateQuickResponse(question, gamesContext);
+        }
+    }
+
+    /**
+     * 🔥 GÉNÉRATION AVEC CHAIN-OF-THOUGHT
+     */
+    public String generateWithChainOfThought(String question, List<Map<String, Object>> gamesContext) {
+        System.out.println("🧠 [OLLAMA-COT] Génération avec raisonnement pas-à-pas");
+
+        String contextText = gamesContext.stream()
+                .limit(2)
+                .map(this::formatGameForPrompt)
+                .collect(Collectors.joining("\n\n"));
+
+        String prompt = buildChainOfThoughtPrompt(question, contextText);
+
+        try {
+            return chatClient.prompt()
+                    .user(prompt)
+                    .call()
+                    .content();
+        } catch (Exception e) {
+            System.err.println("❌ [OLLAMA-COT] Erreur: " + e.getMessage());
+            return generateQuickResponse(question, gamesContext);
+        }
+    }
+
+    /**
+     * 🔥 GÉNÉRATION AVEC SELF-CONSISTENCY
+     */
+    public String generateWithSelfConsistency(String question, List<Map<String, Object>> gamesContext) {
+        System.out.println("🔄 [OLLAMA-SC] Génération avec auto-cohérence");
+
+        String contextText = gamesContext.stream()
+                .limit(2)
+                .map(this::formatGameForPrompt)
+                .collect(Collectors.joining("\n\n"));
+
+        String prompt = buildSelfConsistencyPrompt(question, contextText);
+
+        try {
+            return chatClient.prompt()
+                    .user(prompt)
+                    .call()
+                    .content();
+        } catch (Exception e) {
+            System.err.println("❌ [OLLAMA-SC] Erreur: " + e.getMessage());
+            return generateQuickResponse(question, gamesContext);
+        }
+    }
+
+    /**
+     * 🔥 ANALYSE TYPE DE QUESTION
+     */
+    private String analyzeQuestionType(String question) {
+        String lower = question.toLowerCase();
+
+        if (lower.contains("règles") || lower.contains("comment jouer") || lower.contains("comment se joue")) {
+            return "RULES";
+        }
+        if (lower.contains("meilleurs") || lower.contains("top") || lower.contains("recommand")) {
+            return "RECOMMENDATION";
+        }
+        if (lower.contains("différence") || lower.contains("compar") || lower.contains("vs") || lower.contains("entre")) {
+            return "COMPARISON";
+        }
+        if (lower.contains("histoire") || lower.contains("origine") || lower.contains("quand") || lower.contains("où")) {
+            return "HISTORY";
+        }
+        if (lower.contains("antique") || lower.contains("ancien") || lower.contains("romain") ||
+                lower.contains("égypt") || lower.contains("grec") || lower.contains("viking")) {
+            return "ARCHAEOLOGICAL";
+        }
+
+        return "GENERAL";
+    }
+
+    /**
+     * 🔥 CONSTRUCTION PROMPT ZERO-SHOT ADAPTATIF
+     */
+    private String buildAdaptivePrompt(String question, String contextText, String questionType, int gameCount) {
+        String baseInstruction = """
+            Tu es un expert en jeux de société, avec un style naturel et conversationnel.
+            Ton ton est amical, enthousiaste et professionnel, comme ChatGPT.
+            """;
+
+        String specificInstruction = switch (questionType) {
+            case "RULES" -> """
+                L'utilisateur demande les règles d'un jeu.
+                Explique de manière claire et structurée.
+                """;
+
+            case "RECOMMENDATION" -> String.format("""
+                L'utilisateur cherche des recommandations.
+                %d jeu(x) trouvé(s). Présente-les avec enthousiasme.
+                """, gameCount);
+
+            case "COMPARISON" -> """
+                L'utilisateur compare des jeux.
+                Sois objectif et aide à choisir selon les préférences.
+                """;
+
+            case "HISTORY" -> """
+                L'utilisateur s'intéresse à l'histoire du jeu.
+                Adopte un ton narratif captivant.
+                """;
+
+            case "ARCHAEOLOGICAL" -> """
+                L'utilisateur s'intéresse aux jeux antiques.
+                Sois précis et éducatif.
+                """;
+
+            default -> String.format("""
+                L'utilisateur pose une question générale.
+                %d jeu(x) trouvé(s) dans la base.
+                """, gameCount);
+        };
+
+        return String.format("""
             %s
             
-            QUESTION : %s
+            %s
             
-            CRÉE UNE RÉPONSE EN FRANÇAIS avec :
-            - 1 paragraphe sur l'histoire et le contexte
-            - 1 paragraphe sur les règles principales  
-            - 1 paragraphe de conseils pratiques
-            - Style conversationnel et naturel
+            Question: "%s"
             
-            UTILISE UNIQUEMENT LES INFORMATIONS DU CONTEXTE.
-            RÉPONDS DIRECTEMENT EN FRANÇAIS :
-            """, contextData, question);
+            Jeux trouvés:
+            %s
+            
+            Réponds EN FRANÇAIS, de manière naturelle (150-250 mots).
+            Base ta réponse UNIQUEMENT sur les jeux fournis.
+            """, baseInstruction, specificInstruction, question, contextText);
+    }
+
+    /**
+     * 🔥 CONSTRUCTION FEW-SHOT PROMPT
+     */
+    private String buildFewShotPrompt(String question, String contextText) {
+        return String.format("""
+            Tu es un expert en jeux de société. Voici des exemples de réponses de qualité:
+            
+            --- EXEMPLE 1 ---
+            Q: "Quels sont les meilleurs jeux de stratégie ?"
+            C: Catan (1995), 3-4 joueurs, complexité 2.3/5, note 7.2/10
+            R: "Pour les jeux de stratégie, je recommande **Catan** (1995). C'est un jeu de colonisation et d'échange qui a révolutionné les jeux modernes."
+            
+            --- EXEMPLE 2 ---
+            Q: "Comment jouer à Carcassonne ?"
+            C: Carcassonne (2000), 2-5 joueurs, complexité 1.9/5
+            R: "Carcassonne est un jeu de placement de tuiles très accessible ! Le but est de construire des villes, routes et monastères pour marquer des points."
+            
+            --- EXEMPLE 3 ---
+            Q: "Quelle est la différence entre Pandemic et Spirit Island ?"
+            C: Pandemic (2008), coopératif, 2.4/5 | Spirit Island (2017), coopératif, 4.0/5
+            R: "Les deux sont excellents mais différents ! **Pandemic** est plus accessible (2.4/5). **Spirit Island** est plus complexe (4.0/5)."
+            
+            --- TA TÂCHE ---
+            Question: "%s"
+            
+            Contexte:
+            %s
+            
+            Génère une réponse de qualité similaire aux exemples.
+            Réponds EN FRANÇAIS, en 150-250 mots.
+            """, question, contextText);
+    }
+
+    /**
+     * 🔥 CONSTRUCTION CHAIN-OF-THOUGHT PROMPT
+     */
+    private String buildChainOfThoughtPrompt(String question, String contextText) {
+        return String.format("""
+            Question: "%s"
+            
+            Contexte:
+            %s
+            
+            **ÉTAPE 1 - COMPRÉHENSION** : Analyse la question.
+            - Que cherche l'utilisateur ?
+            - Quels critères sont importants ?
+            
+            **ÉTAPE 2 - CONTEXTE** : Examine les jeux disponibles.
+            - Quels jeux correspondent ?
+            - Quelles sont leurs caractéristiques ?
+            
+            **ÉTAPE 3 - STRUCTURATION** : Organise la réponse.
+            - Comment présenter l'information ?
+            - Quels points mettre en avant ?
+            
+            **ÉTAPE 4 - FORMULATION** : Rédige la réponse.
+            - Sois naturel et conversationnel
+            - Utilise les détails du contexte
+            
+            **RÉPONSE FINALE (en français) :**
+            """, question, contextText);
+    }
+
+    /**
+     * 🔥 CONSTRUCTION SELF-CONSISTENCY PROMPT
+     */
+    private String buildSelfConsistencyPrompt(String question, String contextText) {
+        return String.format("""
+            Question: "%s"
+            
+            Contexte:
+            %s
+            
+            **INSTRUCTIONS** :
+            1. Génère 2 versions différentes de la réponse
+            2. Évalue chaque version (Exactitude/Clarté/Utilité)
+            3. Sélectionne la meilleure
+            4. Améliore-la si nécessaire
+            
+            **RÉPONSE FINALE (en français, 150-250 mots) :**
+            """, question, contextText);
+    }
+
+    /**
+     * 🔥 GÉNÉRATION DEPUIS PROMPT LIBRE
+     */
+    public String generateFromPrompt(String prompt) {
+        System.out.println("🤖 [OLLAMA] Génération depuis prompt libre");
+
+        String fullPrompt = """
+            Tu es un expert en jeux de société.
+            Réponds TOUJOURS en français, de manière claire et engageante.
+            Ton ton est amical, enthousiaste mais professionnel.
+            
+            """ + prompt;
 
         try {
             String response = chatClient.prompt()
-                    .user(prompt)
+                    .user(fullPrompt)
                     .call()
                     .content();
 
-            return ensureFrenchResponse(response, question);
-        } catch (Exception e) {
-            throw new RuntimeException("Ollama error: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Formate le contexte pour Ollama
-     */
-    private String formatContextForOllama(List<Map<String, Object>> gameContext) {
-        if (gameContext.isEmpty()) return "";
-
-        Map<String, Object> game = gameContext.get(0);
-        StringBuilder context = new StringBuilder();
-
-        context.append("Nom: ").append(game.get("name"));
-        if (game.get("yearPublished") != null) {
-            int year = (int) game.get("yearPublished");
-            if (year < 0) {
-                context.append(" (").append(Math.abs(year)).append(" av. J.-C.)");
-            } else {
-                context.append(" (").append(year).append(")");
+            if (response == null || response.trim().isEmpty()) {
+                System.err.println("⚠️ [OLLAMA] Réponse vide reçue");
+                return null;
             }
-        }
-        context.append("\n");
 
-        if (game.get("description") != null) {
-            context.append("Description: ").append(cleanText(game.get("description").toString())).append("\n");
-        }
+            System.out.println("✅ [OLLAMA] Réponse générée (" + response.length() + " caractères)");
+            return response;
 
-        if (game.get("wikipediaSummary") != null) {
-            context.append("Histoire: ").append(cleanText(game.get("wikipediaSummary").toString())).append("\n");
+        } catch (Exception e) {
+            System.err.println("❌ [OLLAMA] Erreur : " + e.getMessage());
+            throw new RuntimeException("Erreur génération Ollama", e);
         }
-
-        if (game.get("rules") != null) {
-            String rules = cleanText(game.get("rules").toString());
-            context.append("Règles: ").append(rules.length() > 300 ? rules.substring(0, 300) + "..." : rules).append("\n");
-        }
-
-        if (game.get("minPlayers") != null && game.get("maxPlayers") != null) {
-            context.append("Joueurs: ").append(game.get("minPlayers")).append("-").append(game.get("maxPlayers")).append("\n");
-        }
-
-        if (game.get("averageRating") != null) {
-            context.append("Note moyenne: ").append(String.format("%.1f/10", game.get("averageRating"))).append("\n");
-        }
-
-        if (game.get("complexityWeight") != null) {
-            context.append("Complexité: ").append(String.format("%.1f/5", game.get("complexityWeight"))).append("\n");
-        }
-
-        if (game.get("categories") != null && !((List<?>) game.get("categories")).isEmpty()) {
-            context.append("Catégories: ").append(game.get("categories")).append("\n");
-        }
-
-        return context.toString();
     }
 
     /**
-     * Génère une réponse de secours si Ollama timeout
+     * 🔥 FORMATAGE JEU POUR PROMPT
      */
-    private String generateFallbackResponse(List<Map<String, Object>> gameContext) {
-        Map<String, Object> game = gameContext.get(0);
-        StringBuilder response = new StringBuilder();
+    private String formatGameForPrompt(Map<String, Object> game) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("🎮 ").append(game.get("name"));
 
-        String name = game.get("name").toString();
-        Integer year = game.get("yearPublished") != null ? (Integer) game.get("yearPublished") : null;
-
-        // Introduction en français
-        if (year != null && year < 0) {
-            response.append("**").append(name).append("** est un jeu antique fascinant qui remonte à ")
-                    .append(Math.abs(year)).append(" ans avant notre ère. ");
-        } else if (year != null) {
-            response.append("**").append(name).append("** est un jeu publié en ").append(year).append(". ");
-        } else {
-            response.append("**").append(name).append("** est un jeu de société captivant. ");
+        if (game.get("yearPublished") != null) {
+            sb.append(" (").append(game.get("yearPublished")).append(")");
         }
+        sb.append("\n");
 
-        // Description
-        if (game.get("description") != null) {
-            response.append(cleanText(game.get("description").toString())).append("\n\n");
-        }
-
-        // Histoire
-        if (game.get("wikipediaSummary") != null) {
-            response.append("**Contexte historique** : ").append(cleanText(game.get("wikipediaSummary").toString())).append("\n\n");
-        }
-
-        // Règles
-        if (game.get("rules") != null) {
-            response.append("**Règles principales** : ").append(cleanText(game.get("rules").toString())).append("\n\n");
-        }
-
-        // Infos pratiques
-        List<String> infos = new ArrayList<>();
-        if (game.get("minPlayers") != null && game.get("maxPlayers") != null) {
-            infos.add("👥 " + game.get("minPlayers") + "-" + game.get("maxPlayers") + " joueurs");
-        }
         if (game.get("averageRating") != null) {
-            infos.add("⭐ " + String.format("%.1f/10", game.get("averageRating")));
+            Double rating = (Double) game.get("averageRating");
+            sb.append("  ⭐ Note: ").append(String.format("%.1f/10", rating)).append("\n");
         }
+
         if (game.get("complexityWeight") != null) {
-            infos.add("🧠 Complexité " + String.format("%.1f/5", game.get("complexityWeight")));
+            Double complexity = (Double) game.get("complexityWeight");
+            String level = complexity <= 2.0 ? "Simple" :
+                    complexity <= 3.5 ? "Moyen" : "Complexe";
+            sb.append("  🎲 Complexité: ").append(String.format("%.1f/5", complexity))
+                    .append(" (").append(level).append(")\n");
         }
 
-        if (!infos.isEmpty()) {
-            response.append("**Caractéristiques** : ").append(String.join(" • ", infos));
+        if (game.get("minPlayers") != null && game.get("maxPlayers") != null) {
+            sb.append("  👥 Joueurs: ").append(game.get("minPlayers"))
+                    .append("-").append(game.get("maxPlayers")).append("\n");
         }
 
-        return response.toString();
-    }
-
-    // [Les méthodes restantes restent identiques...]
-    private String getCacheKey(List<Map<String, Object>> gameContext) {
-        if (gameContext.isEmpty()) return "empty";
-        Map<String, Object> game = gameContext.get(0);
-        String name = game.get("name") != null ? game.get("name").toString() : "unknown";
-        String year = game.get("yearPublished") != null ? game.get("yearPublished").toString() : "";
-        return (name + "_" + year).toLowerCase().replaceAll("[^a-z0-9_]", "");
-    }
-
-    private void cacheResponse(String key, String response, boolean isPopular) {
-        long ttl = isPopular ? 24 * 60 * 60 * 1000L : 60 * 60 * 1000L;
-        responseCache.put(key, new CachedResponse(response, System.currentTimeMillis(), ttl, isPopular));
-        if (responseCache.size() > MAX_CACHE_SIZE) cleanCache();
-        System.out.println("💾 [CACHE] Réponse mise en cache (" + (isPopular ? "POPULAIRE" : "normal") + ")");
-    }
-
-    private void cleanCache() {
-        // [Implémentation existante]
-    }
-
-    private String cleanText(String text) {
-        if (text == null) return "";
-        return text.replaceAll("\\s+", " ").trim();
-    }
-
-    private static class CachedResponse {
-        final String response;
-        final long timestamp;
-        final long ttl;
-        final boolean isPopular;
-        CachedResponse(String response, long timestamp, long ttl, boolean isPopular) {
-            this.response = response;
-            this.timestamp = timestamp;
-            this.ttl = ttl;
-            this.isPopular = isPopular;
+        if (game.get("origin") != null) {
+            sb.append("  🏛️ Origine: ").append(game.get("origin")).append("\n");
         }
-        boolean isExpired() { return System.currentTimeMillis() - timestamp > ttl; }
+
+        if (game.get("description") != null) {
+            String desc = game.get("description").toString();
+            if (desc.length() > 200) {
+                desc = desc.substring(0, 197) + "...";
+            }
+            sb.append("  📝 ").append(desc).append("\n");
+        }
+
+        return sb.toString();
     }
 
-    public String generateTurboResponse(String question, List<Map<String, Object>> gameContext) {
-        return generateNaturalResponse(question, gameContext);
+    /**
+     * 🔥 MÉTHODE UNIFIÉE AVEC STRATÉGIE
+     */
+    public String generateResponseWithStrategy(String question, List<Map<String, Object>> gamesContext,
+                                               String promptingStrategy) {
+        if (!strategiesEnabled) {
+            System.out.println("⚠️ Stratégies désactivées → Zero-Shot");
+            return generateQuickResponse(question, gamesContext);
+        }
+
+        System.out.println("🎯 Utilisation de la stratégie: " + promptingStrategy);
+
+        switch (promptingStrategy.toUpperCase()) {
+            case "FEW_SHOT":
+                return generateWithFewShotPrompting(question, gamesContext);
+            case "CHAIN_OF_THOUGHT":
+            case "COT":
+                return generateWithChainOfThought(question, gamesContext);
+            case "SELF_CONSISTENCY":
+            case "SC":
+                return generateWithSelfConsistency(question, gamesContext);
+            default:
+                return generateQuickResponse(question, gamesContext);
+        }
     }
 }

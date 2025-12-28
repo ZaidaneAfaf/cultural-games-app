@@ -1,0 +1,741 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --primary: #2c1810;
+    --primary-light: #5d4a3a;
+    --secondary: #d4af37;
+    --accent: #b8941f;
+    --luxury-gold: #daa520;
+    --text: #1a0f0a;
+    --text-light: #5d4a3a;
+    --bg: #c4a574;
+    --card: #e8d5b7;
+    --border: #d4af37;
+    --highlight: #f0d980;
+    --stone: #8b7355;
+    --chess-dark: #5d4a3a;
+    --chess-light: #c4a574;
+}
+
+body {
+    font-family: 'Playfair Display', 'Georgia', serif;
+    background:
+        /* Échiquier principal en arrière-plan */
+        repeating-conic-gradient(
+            var(--chess-light) 0deg 90deg,
+            var(--chess-dark) 90deg 180deg
+        ) 0 0 / 80px 80px,
+
+        /* Dégradé principal */
+        linear-gradient(135deg, rgba(93, 74, 58, 0.95) 0%, rgba(139, 115, 85, 0.9) 100%);
+
+    background-attachment: fixed;
+    background-blend-mode: overlay;
+    min-height: 100vh;
+    color: var(--text);
+    line-height: 1.6;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* Motif Échiquier décoratif en bas à gauche */
+body::before {
+    content: '';
+    position: fixed;
+    bottom: 50px;
+    left: 8%;
+    width: 350px;
+    height: 350px;
+    background-image:
+        /* Échiquier */
+        repeating-conic-gradient(
+            rgba(212, 175, 55, 0.1) 0deg 90deg,
+            rgba(139, 115, 85, 0.15) 90deg 180deg
+        ) 0 0 / 40px 40px,
+
+        /* Motif Roi d'échecs */
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3Cg fill='none' stroke='%23d4af37' stroke-width='2.5' opacity='0.4'%3E%3C%21-- Base du roi --%3E%3Crect x='130' y='210' width='40' height='20' rx='5'/%3E%3C%21-- Corps du roi --%3E%3Crect x='120' y='160' width='60' height='50' rx='10'/%3E%3C%21-- Épaule gauche --%3E%3Crect x='90' y='170' width='30' height='30' rx='5'/%3E%3C%21-- Épaule droite --%3E%3Crect x='180' y='170' width='30' height='30' rx='5'/%3E%3C%21-- Croix du roi --%3E%3Cpath d='M150 110 L150 160 M130 130 L170 130' stroke-linecap='round'/%3E%3Ccircle cx='150' cy='100' r='10'/%3E%3C%21-- Détails décoratifs --%3E%3Cpath d='M130 180 Q150 170 170 180' stroke-width='1.5' opacity='0.6'/%3E%3Cpath d='M135 200 Q150 195 165 200' stroke-width='1.5' opacity='0.6'/%3E%3C/g%3E%3C/svg%3E");
+
+    background-size:
+        40px 40px,
+        contain;
+    background-repeat: repeat, no-repeat;
+    background-position: center;
+    pointer-events: none;
+    z-index: 0;
+    filter: blur(0.3px);
+    opacity: 0.7;
+}
+
+/* Motif Cheval d'échecs en haut à droite */
+body::after {
+    content: '';
+    position: fixed;
+    top: 80px;
+    right: 5%;
+    width: 280px;
+    height: 280px;
+    background-image:
+        /* Échiquier diagonal */
+        repeating-conic-gradient(
+            rgba(212, 175, 55, 0.08) 0deg 45deg,
+            rgba(139, 115, 85, 0.12) 45deg 90deg
+        ) 0 0 / 50px 50px,
+
+        /* Motif Cheval (Cavalier) */
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3Cg fill='none' stroke='%23d4af37' stroke-width='2.5' opacity='0.4'%3E%3C%21-- Tête du cheval --%3E%3Cpath d='M180 120 Q200 110 210 130 Q220 150 200 160 Q190 170 180 165 Q170 160 175 150 Q180 140 180 120'/%3E%3C%21-- Oreille --%3E%3Cpath d='M185 115 Q190 105 195 115' stroke-linecap='round'/%3E%3C%21-- Corps --%3E%3Cpath d='M180 165 Q160 180 140 200 L120 220 L140 240 L160 220 Q180 200 190 180'/%3E%3C%21-- Crinière --%3E%3Cpath d='M175 135 Q170 140 165 145 Q160 150 155 155' stroke-width='1.5' opacity='0.6'/%3E%3C%21-- Œil --%3E%3Ccircle cx='190' cy='135' r='3' fill='%23d4af37' opacity='0.6'/%3E%3C%21-- Détails décoratifs --%3E%3Cpath d='M160 180 Q150 190 140 195' stroke-width='1.5' opacity='0.5'/%3E%3Cpath d='M170 160 Q165 165 160 170' stroke-width='1.5' opacity='0.5'/%3E%3C/g%3E%3C/svg%3E");
+
+    background-size:
+        50px 50px,
+        contain;
+    background-repeat: repeat, no-repeat;
+    background-position: center;
+    pointer-events: none;
+    z-index: 0;
+    animation: float 20s ease-in-out infinite;
+    filter: blur(0.3px);
+    opacity: 0.7;
+}
+
+/* Motif Échiquier avec pièces au centre */
+.container::before {
+    content: '';
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 400px;
+    height: 400px;
+    background-image:
+        /* Échiquier stylisé */
+        repeating-conic-gradient(
+            rgba(255, 255, 255, 0.05) 0deg 90deg,
+            rgba(212, 175, 55, 0.08) 90deg 180deg
+        ) 0 0 / 60px 60px,
+
+        /* Cadre d'échiquier avec pièces */
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'%3E%3Cg fill='none' stroke='%23d4af37' stroke-width='2' opacity='0.25'%3E%3C%21-- Cadre d'échiquier --%3E%3Crect x='100' y='50' width='200' height='300' rx='15'/%3E%3C%21-- Cases d'échiquier --%3E%3Crect x='120' y='70' width='40' height='40'/%3E%3Crect x='200' y='70' width='40' height='40'/%3E%3Crect x='160' y='110' width='40' height='40'/%3E%3Crect x='240' y='110' width='40' height='40'/%3E%3C%21-- Pièces diverses --%3E%3C%21-- Roi --%3E%3Cpath d='M180 200 L180 220 M170 210 L190 210' stroke-linecap='round'/%3E%3Ccircle cx='180' cy='195' r='8'/%3E%3C%21-- Dame --%3E%3Ccircle cx='220' cy='200' r='10'/%3E%3Ccircle cx='220' cy='200' r='5'/%3E%3C%21-- Tour --%3E%3Crect x='140' y='250' width='20' height='30' rx='3'/%3E%3Crect x='135' y='245' width='30' height='5' rx='2'/%3E%3C%21-- Fou --%3E%3Cellipse cx='260' cy='250' rx='8' ry='12'/%3E%3Ccircle cx='260' cy='240' r='5'/%3E%3C%21-- Pions --%3E%3Ccircle cx='160' cy='300' r='6'/%3E%3Ccircle cx='200' cy='300' r='6'/%3E%3Ccircle cx='240' cy='300' r='6'/%3E%3C/g%3E%3C/svg%3E");
+
+    background-size:
+        60px 60px,
+        contain;
+    background-repeat: repeat, no-repeat;
+    background-position: center;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+    filter: blur(0.4px);
+}
+
+/* Motif Échiquier miniature en bas à droite */
+.container::after {
+    content: '';
+    position: fixed;
+    bottom: 20%;
+    right: 15%;
+    width: 200px;
+    height: 200px;
+    background-image:
+        /* Échiquier miniature */
+        repeating-conic-gradient(
+            rgba(212, 175, 55, 0.1) 0deg 90deg,
+            rgba(139, 115, 85, 0.15) 90deg 180deg
+        ) 0 0 / 25px 25px,
+
+        /* Motif abstrait échiquier */
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23d4af37' stroke-width='1.5' opacity='0.2'%3E%3C%21-- Échiquier stylisé --%3E%3Crect x='60' y='60' width='80' height='80' rx='10'/%3E%3C%21-- Cases --%3E%3Crect x='70' y='70' width='20' height='20'/%3E%3Crect x='110' y='70' width='20' height='20'/%3E%3Crect x='70' y='110' width='20' height='20'/%3E%3Crect x='110' y='110' width='20' height='20'/%3E%3C%21-- Pièces miniatures --%3E%3C%21-- Roi --%3E%3Cpath d='M85 150 L85 160 M80 155 L90 155' stroke-linecap='round' stroke-width='1'/%3E%3Ccircle cx='85' cy='148' r='3'/%3E%3C%21-- Cheval --%3E%3Cpath d='M115 150 Q120 148 125 152 Q130 156 120 158 Q115 160 115 150' stroke-width='1'/%3E%3C%21-- Pions --%3E%3Ccircle cx='100' cy='170' r='2.5'/%3E%3Ccircle cx='120' cy='170' r='2.5'/%3E%3C/g%3E%3C/svg%3E");
+
+    background-size:
+        25px 25px,
+        contain;
+    background-repeat: repeat, no-repeat;
+    background-position: center;
+    pointer-events: none;
+    z-index: 0;
+    animation: float 25s ease-in-out infinite reverse;
+    opacity: 0.5;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(5deg); }
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem 120px 1rem;
+    position: relative;
+    z-index: 1;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: var(--card);
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+}
+
+.header h1 {
+    font-size: 2.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--secondary);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-family: 'Cinzel', serif;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.header p {
+    font-size: 1rem;
+    color: var(--bg);
+    font-style: italic;
+}
+
+.card {
+    background: linear-gradient(145deg, #d4c3a8 0%, #c9b396 100%);
+    border-radius: 15px;
+    padding: 2.5rem;
+    box-shadow:
+        0 15px 40px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(212,175,55,0.3);
+    margin-bottom: 2rem;
+    border: 3px solid var(--secondary);
+    position: relative;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--secondary), transparent);
+}
+
+.welcome-card {
+    text-align: center;
+}
+
+.welcome-message {
+    margin-bottom: 2rem;
+}
+
+.welcome-message h2 {
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+}
+
+/* CONVERSATION HISTORY */
+.conversation-history {
+    max-width: 900px;
+    margin: 0 auto 2rem;
+}
+
+.message {
+    margin-bottom: 1.5rem;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.message-bubble {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.message.user {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.user-bubble {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: var(--secondary);
+    padding: 1rem 1.5rem;
+    border-radius: 20px 20px 5px 20px;
+    max-width: 70%;
+    box-shadow:
+        0 8px 20px rgba(0,0,0,0.3),
+        inset 0 1px 0 rgba(212,175,55,0.2);
+    border: 1px solid var(--luxury-gold);
+}
+
+.user-bubble .message-icon {
+    background: linear-gradient(135deg, var(--secondary), var(--luxury-gold));
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.user-bubble .message-content {
+    flex: 1;
+    font-weight: 500;
+}
+
+.bot-bubble {
+    background: linear-gradient(145deg, #d4c3a8 0%, #c9b396 100%);
+    padding: 1.5rem;
+    border-radius: 5px 20px 20px 20px;
+    max-width: 85%;
+    box-shadow:
+        0 8px 20px rgba(0,0,0,0.35),
+        inset 0 1px 0 rgba(212,175,55,0.2);
+    border: 2px solid var(--accent);
+}
+
+.bot-bubble .message-icon {
+    background: linear-gradient(135deg, var(--secondary), var(--accent));
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.bot-bubble .message-content {
+    flex: 1;
+}
+
+.bot-response {
+    color: var(--text);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    margin-bottom: 1rem;
+}
+
+/* SEARCH BAR FIXED */
+.search-container-fixed {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top,
+        rgba(93, 74, 58, 0.98),
+        rgba(93, 74, 58, 0.95));
+    padding: 1.5rem;
+    box-shadow:
+        0 -8px 30px rgba(0,0,0,0.3),
+        inset 0 1px 0 rgba(212,175,55,0.3);
+    backdrop-filter: blur(10px);
+    z-index: 100;
+    border-top: 3px solid var(--secondary);
+}
+
+.search-box {
+    display: flex;
+    gap: 1rem;
+    max-width: 900px;
+    margin: 0 auto;
+    flex-wrap: wrap;
+    align-items: stretch;
+}
+
+.search-input {
+    flex: 1;
+    min-width: 300px;
+    padding: 1.2rem 1.5rem;
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s;
+    background: linear-gradient(145deg, #d4c3a8, #c9b396);
+    color: var(--text);
+    font-family: 'Georgia', serif;
+    box-shadow:
+        inset 0 2px 4px rgba(0,0,0,0.15),
+        0 2px 8px rgba(212,175,55,0.2);
+}
+
+.search-input::placeholder {
+    color: var(--text-light);
+    opacity: 0.8;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--secondary);
+    box-shadow:
+        0 0 0 3px rgba(212,175,55,0.2),
+        inset 0 2px 4px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+
+.search-btn {
+    padding: 1.2rem 2.5rem;
+    background: linear-gradient(135deg, var(--secondary) 0%, var(--luxury-gold) 100%);
+    color: var(--primary);
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow:
+        0 4px 12px rgba(212,175,55,0.3),
+        inset 0 1px 0 rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    white-space: nowrap;
+}
+
+.search-btn:hover {
+    transform: translateY(-3px);
+    box-shadow:
+        0 6px 18px rgba(212,175,55,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.5);
+}
+
+.search-btn:active {
+    transform: translateY(-1px);
+}
+
+.examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    justify-content: center;
+}
+
+.example-tag {
+    background: linear-gradient(145deg, var(--bg), #f0e4d0);
+    padding: 0.75rem 1.25rem;
+    border-radius: 25px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 2px solid var(--accent);
+    color: var(--text);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+}
+
+.example-tag:hover {
+    background: linear-gradient(135deg, var(--secondary), var(--luxury-gold));
+    color: var(--primary);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(212,175,55,0.4);
+    border-color: var(--secondary);
+}
+
+.info-box {
+    background: linear-gradient(135deg, #f5e6d3, #ecdcc4);
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-top: 1.5rem;
+    border-left: 4px solid var(--accent);
+}
+
+.info-box h4 {
+    color: var(--primary);
+    margin-bottom: 0.75rem;
+    font-size: 1.1rem;
+}
+
+.loading {
+    text-align: center;
+    padding: 3rem;
+    background: var(--card);
+    border-radius: 20px;
+    margin: 2rem auto;
+    display: none;
+    border: 2px solid var(--accent);
+    max-width: 500px;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid var(--border);
+    border-top: 4px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.games-grid {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.game-card {
+    background: linear-gradient(145deg, #d4c3a8 0%, #c9b396 100%);
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s;
+    cursor: pointer;
+    position: relative;
+    box-shadow:
+        0 6px 15px rgba(0,0,0,0.3),
+        inset 0 1px 0 rgba(212,175,55,0.2);
+}
+
+.game-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, var(--secondary), transparent);
+    border-radius: 12px 12px 0 0;
+}
+
+.game-card:hover {
+    transform: translateY(-8px);
+    box-shadow:
+        0 15px 35px rgba(212,175,55,0.4),
+        inset 0 1px 0 rgba(212,175,55,0.2);
+    border-color: var(--secondary);
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.game-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary);
+    font-family: 'Cinzel', serif;
+}
+
+.game-year, .source-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: 0.5px;
+}
+
+.game-year {
+    background: linear-gradient(135deg, var(--secondary), var(--luxury-gold));
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.source-badge {
+    background: linear-gradient(135deg, var(--stone), var(--accent));
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.game-meta {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.meta-item {
+    background: var(--bg);
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+.game-description {
+    color: var(--text-light);
+    margin-bottom: 1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 0.9rem;
+}
+
+.game-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.view-details {
+    color: var(--primary);
+    font-weight: 600;
+    transition: all 0.3s;
+    font-size: 0.9rem;
+}
+
+.view-details:hover {
+    color: var(--accent);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(62,39,35,0.85);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+}
+
+.modal.active {
+    display: block;
+}
+
+.modal-content {
+    background: linear-gradient(145deg, var(--card) 0%, #fef9f0 100%);
+    margin: 2% auto;
+    width: 90%;
+    max-width: 900px;
+    max-height: 90vh;
+    border-radius: 15px;
+    overflow: hidden;
+    border: 4px solid var(--secondary);
+    box-shadow:
+        0 25px 70px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(212,175,55,0.3);
+}
+
+.modal-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: var(--secondary);
+    padding: 2rem;
+    position: relative;
+    border-bottom: 3px solid var(--secondary);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.close {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    font-size: 2rem;
+    cursor: pointer;
+    background: rgba(255,255,255,0.2);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    color: var(--card);
+}
+
+.close:hover {
+    background: rgba(255,255,255,0.3);
+    transform: rotate(90deg);
+}
+
+.modal-body {
+    padding: 2rem;
+    max-height: calc(90vh - 200px);
+    overflow-y: auto;
+}
+
+.detail-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: var(--bg);
+    border-radius: 12px;
+    border-left: 4px solid var(--primary);
+}
+
+.detail-section h3 {
+    margin-bottom: 1rem;
+    color: var(--primary);
+}
+
+.metadata-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.metadata-item {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+@media (max-width: 768px) {
+    .header h1 { font-size: 2rem; }
+    .search-box { flex-direction: column; }
+    .modal-content { width: 95%; margin: 5% auto; }
+    .metadata-grid { grid-template-columns: 1fr; }
+    .games-grid { grid-template-columns: 1fr; }
+    .user-bubble, .bot-bubble { max-width: 90%; }
+    .container { padding-bottom: 140px; }
+
+    /* Optimisation des motifs pour mobile */
+    body::before,
+    body::after,
+    .container::before,
+    .container::after {
+        opacity: 0.4;
+        filter: blur(1px);
+    }
+
+    body::before {
+        width: 200px;
+        height: 200px;
+        bottom: 30px;
+        left: 5%;
+    }
+
+    body::after {
+        width: 150px;
+        height: 150px;
+        top: 50px;
+        right: 2%;
+    }
+
+    .container::before {
+        width: 250px;
+        height: 250px;
+    }
+
+    .container::after {
+        width: 120px;
+        height: 120px;
+        bottom: 15%;
+        right: 5%;
+    }
+}

@@ -5,39 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎲 Système RAG - Expert en Jeux de Société</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         :root {
             --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --secondary: #f59e0b;
-            --accent: #10b981;
+            --archaeo: #8b5cf6;
             --text: #1f2937;
             --text-light: #6b7280;
             --bg: #f8fafc;
-            --card-bg: #ffffff;
+            --card: #ffffff;
             --border: #e5e7eb;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
         }
 
         body {
-            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            font-family: 'Inter', system-ui, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             color: var(--text);
             line-height: 1.6;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem 1rem;
-        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; }
 
         .header {
             text-align: center;
@@ -49,68 +37,92 @@
             font-size: 3rem;
             font-weight: 800;
             margin-bottom: 0.5rem;
-            background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
 
-        .header p {
-            font-size: 1.2rem;
-            opacity: 0.9;
-            font-weight: 300;
-        }
-
-        .search-container {
-            background: var(--card-bg);
+        .card {
+            background: var(--card);
             border-radius: 20px;
             padding: 2.5rem;
-            box-shadow: var(--shadow-lg);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
             margin-bottom: 2rem;
-            backdrop-filter: blur(10px);
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .mode-btn {
+            padding: 0.75rem 1.5rem;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .mode-btn:hover { transform: translateY(-2px); }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .mode-btn.active.archaeo {
+            background: linear-gradient(135deg, var(--archaeo), #7c3aed);
+            border-color: var(--archaeo);
         }
 
         .search-box {
             display: flex;
             gap: 1rem;
             margin-bottom: 1.5rem;
+            flex-wrap: wrap;
         }
 
         .search-input {
             flex: 1;
+            min-width: 250px;
             padding: 1rem 1.5rem;
             border: 2px solid var(--border);
             border-radius: 12px;
             font-size: 1.1rem;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
             background: var(--bg);
         }
 
         .search-input:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-            transform: translateY(-2px);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+        }
+
+        .search-input.archaeo-mode:focus {
+            border-color: var(--archaeo);
+            box-shadow: 0 0 0 3px rgba(139,92,246,0.1);
         }
 
         .search-btn {
             padding: 1rem 2rem;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
             color: white;
             border: none;
             border-radius: 12px;
             font-size: 1.1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+            transition: all 0.3s;
         }
 
-        .search-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
+        .search-btn:hover { transform: translateY(-2px); }
+
+        .search-btn.archaeo-mode {
+            background: linear-gradient(135deg, var(--archaeo), #7c3aed);
         }
 
         .examples {
@@ -126,9 +138,8 @@
             border-radius: 50px;
             font-size: 0.9rem;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
             border: 1px solid var(--border);
-            color: var(--text-light);
         }
 
         .example-tag:hover {
@@ -137,13 +148,29 @@
             transform: translateY(-2px);
         }
 
+        .example-tag.archaeo { background: #f5f3ff; border-color: var(--archaeo); }
+        .example-tag.archaeo:hover { background: var(--archaeo); }
+
+        .archaeo-info {
+            background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-top: 1.5rem;
+            border-left: 4px solid var(--archaeo);
+            display: none;
+        }
+
+        .archaeo-info.active { display: block; }
+        .archaeo-info h4 { color: var(--archaeo); margin-bottom: 0.75rem; }
+        .archaeo-info ul { margin-left: 1.5rem; }
+
         .loading {
             text-align: center;
             padding: 3rem;
-            background: var(--card-bg);
+            background: var(--card);
             border-radius: 20px;
-            box-shadow: var(--shadow);
             margin: 2rem 0;
+            display: none;
         }
 
         .loading-spinner {
@@ -156,16 +183,11 @@
             margin: 0 auto 1rem;
         }
 
+        .loading-spinner.archaeo { border-top-color: var(--archaeo); }
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
-        }
-
-        .results-container {
-            background: var(--card-bg);
-            border-radius: 20px;
-            padding: 2.5rem;
-            box-shadow: var(--shadow-lg);
         }
 
         .ai-response {
@@ -178,21 +200,105 @@
             line-height: 1.7;
         }
 
-        .games-grid {
-            display: grid;
-            gap: 1.5rem;
-            margin-top: 2rem;
+        .ai-response.archaeo {
+            background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+            border-left-color: var(--archaeo);
         }
 
+        .archaeology-analysis {
+            background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+            padding: 2rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            border-left: 4px solid var(--archaeo);
+            font-family: Georgia, serif;
+            line-height: 1.8;
+        }
+
+        .analysis-section {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px dashed #c4b5fd;
+        }
+
+        .analysis-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+        .analysis-title {
+            color: var(--archaeo);
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .analysis-element {
+            margin-left: 1.5rem;
+            margin-bottom: 0.5rem;
+            position: relative;
+        }
+
+        .analysis-element:before {
+            content: "•";
+            color: var(--archaeo);
+            font-weight: bold;
+            position: absolute;
+            left: -1.5rem;
+        }
+
+        .hypothesis-item {
+            background: rgba(255,255,255,0.7);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 3px solid var(--archaeo);
+        }
+
+        .hypothesis-name {
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .confidence-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .confidence-low { background: linear-gradient(135deg, #fca5a5, #f87171); color: #7f1d1d; }
+        .confidence-medium { background: linear-gradient(135deg, #fcd34d, #fbbf24); color: #78350f; }
+        .confidence-high { background: linear-gradient(135deg, #86efac, #4ade80); color: #14532d; }
+
+        .justification {
+            font-style: italic;
+            color: var(--text-light);
+            margin: 0.5rem 0;
+            padding-left: 1rem;
+            border-left: 2px solid #ddd6fe;
+        }
+
+        .missing-info {
+            background: rgba(254,226,226,0.3);
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+
+        .missing-info:before { content: "❓"; margin-right: 0.5rem; }
+
+        .games-grid { display: grid; gap: 1.5rem; margin-top: 2rem; }
+
         .game-card {
-            background: var(--card-bg);
+            background: var(--card);
             border: 1px solid var(--border);
             border-radius: 16px;
             padding: 1.5rem;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
             cursor: pointer;
             position: relative;
-            overflow: hidden;
         }
 
         .game-card::before {
@@ -202,13 +308,16 @@
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            background: linear-gradient(135deg, var(--primary), #f59e0b);
+        }
+
+        .game-card.similar::before {
+            background: linear-gradient(135deg, var(--archaeo), #7c3aed);
         }
 
         .game-card:hover {
             transform: translateY(-5px);
-            box-shadow: var(--shadow-lg);
-            border-color: var(--primary);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
         }
 
         .game-header {
@@ -216,23 +325,23 @@
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
         }
 
-        .game-title {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: var(--text);
-            margin-bottom: 0.5rem;
-        }
+        .game-title { font-size: 1.4rem; font-weight: 700; }
 
-        .game-year {
-            background: var(--primary);
-            color: white;
+        .game-year, .source-badge {
             padding: 0.25rem 0.75rem;
             border-radius: 20px;
             font-size: 0.8rem;
             font-weight: 600;
+            color: white;
         }
+
+        .game-year { background: var(--primary); }
+        .game-year.archaeo, .source-badge.archaeo { background: var(--archaeo); }
+        .source-badge { background: #10b981; }
 
         .game-meta {
             display: flex;
@@ -242,9 +351,6 @@
         }
 
         .meta-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
             background: var(--bg);
             padding: 0.5rem 1rem;
             border-radius: 8px;
@@ -270,29 +376,22 @@
             border-top: 1px solid var(--border);
         }
 
-        .source-badge {
-            background: var(--accent);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
         .view-details {
             color: var(--primary);
             font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
         }
 
-        .view-details:hover {
-            gap: 0.75rem;
+        .view-details.archaeo { color: var(--archaeo); }
+
+        .archaeology-match {
+            font-size: 0.9rem;
+            color: var(--archaeo);
+            font-weight: 600;
         }
 
-        /* Modal amélioré */
+        .archaeology-match:before { content: "🎯 "; }
+
         .modal {
             display: none;
             position: fixed;
@@ -300,41 +399,30 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0,0,0,0.8);
             backdrop-filter: blur(5px);
             z-index: 1000;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
         }
 
         .modal-content {
-            position: relative;
-            background: var(--card-bg);
+            background: var(--card);
             margin: 2% auto;
-            padding: 0;
             width: 90%;
             max-width: 900px;
             max-height: 90vh;
             border-radius: 20px;
-            box-shadow: var(--shadow-lg);
-            animation: slideUp 0.3s ease;
             overflow: hidden;
         }
 
-        @keyframes slideUp {
-            from { transform: translateY(50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
         .modal-header {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
             color: white;
             padding: 2rem;
             position: relative;
+        }
+
+        .modal-header.archaeo {
+            background: linear-gradient(135deg, var(--archaeo), #7c3aed);
         }
 
         .close {
@@ -343,20 +431,17 @@
             right: 1.5rem;
             font-size: 2rem;
             cursor: pointer;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255,255,255,0.2);
             width: 40px;
             height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
         }
 
-        .close:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: rotate(90deg);
-        }
+        .close:hover { background: rgba(255,255,255,0.3); transform: rotate(90deg); }
 
         .modal-body {
             padding: 2rem;
@@ -372,18 +457,12 @@
             border-left: 4px solid var(--primary);
         }
 
-        .detail-section h3 {
-            color: var(--text);
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+        .detail-section.archaeo {
+            background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+            border-left-color: var(--archaeo);
         }
 
-        .wikipedia-section {
-            background: linear-gradient(135deg, #f0fdf4, #dcfce7) !important;
-            border-left-color: var(--accent) !important;
-        }
+        .detail-section h3 { margin-bottom: 1rem; }
 
         .metadata-grid {
             display: grid;
@@ -407,28 +486,21 @@
             border: 1px solid var(--border);
         }
 
-        /* Responsive */
+        .archaeology-note {
+            background: rgba(254,249,195,0.5);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            border: 1px dashed #fbbf24;
+            font-size: 0.9rem;
+        }
+
         @media (max-width: 768px) {
-            .header h1 {
-                font-size: 2rem;
-            }
-
-            .search-box {
-                flex-direction: column;
-            }
-
-            .search-input {
-                margin-bottom: 1rem;
-            }
-
-            .modal-content {
-                width: 95%;
-                margin: 5% auto;
-            }
-
-            .metadata-grid {
-                grid-template-columns: 1fr;
-            }
+            .header h1 { font-size: 2rem; }
+            .search-box { flex-direction: column; }
+            .modal-content { width: 95%; margin: 5% auto; }
+            .metadata-grid { grid-template-columns: 1fr; }
+            .mode-selector { flex-direction: column; }
         }
     </style>
 </head>
@@ -439,54 +511,111 @@
         <p>Découvrez l'histoire, les règles et les stratégies de milliers de jeux</p>
     </div>
 
-    <div class="search-container">
+    <div class="card">
+        <div class="mode-selector">
+            <button class="mode-btn active" onclick="switchMode('normal')">🎮 Mode Normal</button>
+            <button class="mode-btn archaeo" onclick="switchMode('archaeo')">🏛️ Mode Archéologue</button>
+        </div>
+
         <div class="search-box">
             <input type="text" id="queryInput" class="search-input"
                    placeholder="Ex: Règles du backgammon, jeux de stratégie pour 4 joueurs..." />
-            <button class="search-btn" onclick="performSearch()">
-                <span>🔍</span>
-                Rechercher
+            <button class="search-btn" id="searchBtn" onclick="performSearch()">
+                <span id="searchIcon">🔍</span>
+                <span id="searchText">Rechercher</span>
             </button>
         </div>
 
-        <div class="examples">
+        <div class="examples" id="examples">
             <div class="example-tag" onclick="setQuery(this)">Règles du backgammon</div>
             <div class="example-tag" onclick="setQuery(this)">Jeux égyptiens anciens</div>
             <div class="example-tag" onclick="setQuery(this)">Stratégie pour 4 joueurs</div>
             <div class="example-tag" onclick="setQuery(this)">Jeux familiaux simples</div>
             <div class="example-tag" onclick="setQuery(this)">Jeux rapides 30 minutes</div>
         </div>
+
+        <div class="archaeo-info" id="archaeoInfo">
+            <h4>🏛️ Mode Identification Archéologique</h4>
+            <p style="margin-bottom: 1rem;">Décrivez l'objet de jeu que vous avez trouvé.</p>
+            <ul>
+                <li><strong>Matériaux</strong> : pierre, bois, argile, os, ivoire...</li>
+                <li><strong>Formes</strong> : plateau carré, pièces circulaires, dés...</li>
+                <li><strong>Motifs</strong> : gravures, symboles, inscriptions...</li>
+                <li><strong>Dimensions</strong> : taille approximative</li>
+            </ul>
+        </div>
     </div>
 
-    <div id="loading" style="display: none;" class="loading">
-        <div class="loading-spinner"></div>
-        <h3>Recherche en cours...</h3>
-        <p style="color: var(--text-light); margin-top: 1rem;">
-            Consultation de notre base de données, analyse IA et recherche Wikipedia...
-        </p>
+    <div id="loading" class="loading">
+        <div class="loading-spinner" id="loadingSpinner"></div>
+        <h3 id="loadingText">Recherche en cours...</h3>
+        <p style="color: var(--text-light); margin-top: 1rem;" id="loadingSubtext"></p>
     </div>
 
-    <div id="results" class="results-container" style="display: none;">
-        <!-- Les résultats seront injectés ici -->
-    </div>
+    <div id="results" class="card" style="display: none;"></div>
 </div>
 
-<!-- Modal amélioré -->
 <div id="gameModal" class="modal">
     <div class="modal-content">
-        <div class="modal-header">
+        <div class="modal-header" id="modalHeader">
             <span class="close" onclick="closeModal()">&times;</span>
             <h2 id="modalTitle">Détails du jeu</h2>
         </div>
         <div class="modal-body">
-            <div id="gameDetails" class="game-details"></div>
+            <div id="gameDetails"></div>
         </div>
     </div>
 </div>
 
 <script>
-    // Le code JavaScript reste EXACTEMENT le même
-    let currentGames = [];
+    let currentMode = 'normal';
+    let isArchaeologyMode = false;
+
+    function switchMode(mode) {
+        currentMode = mode;
+        isArchaeologyMode = (mode === 'archaeo');
+
+        document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.closest('.mode-btn').classList.add('active');
+
+        const input = document.getElementById('queryInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const archaeoInfo = document.getElementById('archaeoInfo');
+        const examples = document.getElementById('examples');
+
+        if (isArchaeologyMode) {
+            input.placeholder = "Décrivez l'objet trouvé : matériau, forme, motifs, dimensions...";
+            input.classList.add('archaeo-mode');
+            searchBtn.classList.add('archaeo-mode');
+            document.getElementById('searchIcon').textContent = '🏛️';
+            document.getElementById('searchText').textContent = 'Analyser';
+            archaeoInfo.classList.add('active');
+
+            examples.innerHTML = `
+                <div class="example-tag archaeo" onclick="setQuery(this)">Dés à 6 faces en os, gravures sur chaque face</div>
+                <div class="example-tag archaeo" onclick="setQuery(this)">Plateau en bois carré avec cases gravées, 30cm</div>
+                <div class="example-tag archaeo" onclick="setQuery(this)">Pièces circulaires en argile avec symboles</div>
+                <div class="example-tag archaeo" onclick="setQuery(this)">Tablette d'argile avec inscriptions</div>
+            `;
+        } else {
+            input.placeholder = "Ex: Règles du backgammon, jeux de stratégie...";
+            input.classList.remove('archaeo-mode');
+            searchBtn.classList.remove('archaeo-mode');
+            document.getElementById('searchIcon').textContent = '🔍';
+            document.getElementById('searchText').textContent = 'Rechercher';
+            archaeoInfo.classList.remove('active');
+
+            examples.innerHTML = `
+                <div class="example-tag" onclick="setQuery(this)">Règles du backgammon</div>
+                <div class="example-tag" onclick="setQuery(this)">Jeux égyptiens anciens</div>
+                <div class="example-tag" onclick="setQuery(this)">Stratégie pour 4 joueurs</div>
+                <div class="example-tag" onclick="setQuery(this)">Jeux familiaux simples</div>
+                <div class="example-tag" onclick="setQuery(this)">Jeux rapides 30 minutes</div>
+            `;
+        }
+
+        document.getElementById('results').style.display = 'none';
+    }
 
     function setQuery(element) {
         document.getElementById('queryInput').value = element.textContent;
@@ -494,83 +623,261 @@
 
     async function performSearch() {
         const query = document.getElementById('queryInput').value.trim();
-        if (!query) return;
+        if (!query) {
+            alert('Veuillez entrer une requête');
+            return;
+        }
 
         const resultsDiv = document.getElementById('results');
         const loadingDiv = document.getElementById('loading');
+        const spinner = document.getElementById('loadingSpinner');
+
+        if (isArchaeologyMode) {
+            spinner.className = 'loading-spinner archaeo';
+            document.getElementById('loadingText').textContent = 'Analyse archéologique...';
+            document.getElementById('loadingSubtext').textContent = 'Comparaison avec la base de données...';
+        } else {
+            spinner.className = 'loading-spinner';
+            document.getElementById('loadingText').textContent = 'Recherche en cours...';
+            document.getElementById('loadingSubtext').textContent = 'Consultation de la base de données...';
+        }
 
         resultsDiv.style.display = 'none';
         loadingDiv.style.display = 'block';
 
         try {
-            console.time('Recherche RAG');
             const response = await fetch(`/api/rag/search?query=${encodeURIComponent(query)}&maxResults=5`);
             const data = await response.json();
-            console.timeEnd('Recherche RAG');
 
-            currentGames = data.relevantGames;
             loadingDiv.style.display = 'none';
             resultsDiv.style.display = 'block';
 
-            let html = `<div class="ai-response">${data.answer}</div>`;
+            isArchaeologyMode ? displayArchaeologyResults(data) : displayNormalResults(data);
 
-            html += `<h3 style="margin-bottom: 1.5rem; color: var(--text);">🎯 ${data.relevantGames.length} jeux trouvés</h3>`;
+        } catch (error) {
+            loadingDiv.style.display = 'none';
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = `
+                <div style="color: #ef4444; text-align: center; padding: 2rem;">
+                    <h3>❌ Erreur</h3>
+                    <p>${error.message}</p>
+                    <button onclick="performSearch()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer;">Réessayer</button>
+                </div>`;
+        }
+    }
+
+    function displayNormalResults(data) {
+        let html = `<div class="ai-response">${data.answer}</div>`;
+
+        if (data.relevantGames?.length > 0) {
+            html += `<h3 style="margin-bottom: 1.5rem;">🎯 ${data.relevantGames.length} jeu${data.relevantGames.length > 1 ? 'x' : ''} trouvé${data.relevantGames.length > 1 ? 's' : ''}</h3>`;
             html += `<div class="games-grid">`;
 
-            data.relevantGames.forEach((game, index) => {
-                const hasWikipedia = game.wikipediaSummary;
-
+            data.relevantGames.forEach(game => {
                 html += `
                 <div class="game-card" onclick="showGameDetails('${game.id}')">
                     <div class="game-header">
                         <div>
                             <div class="game-title">${game.name}</div>
-                            ${game.yearPublished ? `<div class="game-year">${game.yearPublished < 0 ? Math.abs(game.yearPublished) + ' av. JC' : game.yearPublished}</div>` : ''}
+                            ${game.yearPublished ? `<div class="game-year ${game.yearPublished < 1500 ? 'archaeo' : ''}">${formatYear(game.yearPublished)}</div>` : ''}
                         </div>
                     </div>
-
                     <div class="game-meta">
                         ${game.averageRating ? `<div class="meta-item">⭐ ${game.averageRating.toFixed(1)}</div>` : ''}
                         ${game.complexityWeight ? `<div class="meta-item">🧠 ${game.complexityWeight.toFixed(1)}</div>` : ''}
                         ${game.minPlayers && game.maxPlayers ? `<div class="meta-item">👥 ${game.minPlayers}-${game.maxPlayers}</div>` : ''}
-                        ${hasWikipedia ? `<div class="meta-item">🌐 Wikipedia</div>` : ''}
+                        ${game.wikipediaSummary ? `<div class="meta-item">🌐 Wikipedia</div>` : ''}
                     </div>
-
                     ${game.description ? `<div class="game-description">${game.description.substring(0, 200)}...</div>` : ''}
-
                     <div class="game-footer">
-                        <span class="source-badge">${game.source}</span>
-                        <div class="view-details">
-                            Voir les détails
-                            <span>→</span>
-                        </div>
+                        <span class="source-badge ${game.source === 'LUDII' ? 'archaeo' : ''}">${game.source}</span>
+                        <div class="view-details ${game.source === 'LUDII' ? 'archaeo' : ''}">Voir les détails →</div>
                     </div>
                 </div>`;
             });
 
             html += `</div>`;
-            resultsDiv.innerHTML = html;
-
-        } catch (error) {
-            loadingDiv.style.display = 'none';
-            resultsDiv.style.display = 'block';
-            resultsDiv.innerHTML = `<div style="color: #ef4444; text-align: center; padding: 2rem;">
-                <h3>❌ Erreur de recherche</h3>
-                <p>${error.message}</p>
-            </div>`;
         }
+
+        document.getElementById('results').innerHTML = html;
     }
 
-    async function showGameDetails(gameId) {
+    function displayArchaeologyResults(data) {
+        let html = '';
+
+        if (data.answer && data.answer !== "Analyse non disponible") {
+            html += `<div class="archaeology-analysis">${formatArchaeologyResponse(data.answer)}</div>`;
+        }
+
+        if (data.relevantGames?.length > 0) {
+            html += `<h3 style="margin-bottom: 1.5rem;">🏛️ ${data.relevantGames.length} jeu${data.relevantGames.length > 1 ? 'x' : ''} similaire${data.relevantGames.length > 1 ? 's' : ''}</h3>`;
+            html += `<div class="games-grid">`;
+
+            data.relevantGames.forEach(game => {
+                const match = calculateMatch(game, data.answer || '');
+                html += `
+                <div class="game-card similar" onclick="showGameDetails('${game.id}', true)">
+                    <div class="game-header">
+                        <div>
+                            <div class="game-title">${game.name}</div>
+                            ${game.yearPublished ? `<div class="game-year archaeo">${formatYear(game.yearPublished)}</div>` : ''}
+                        </div>
+                        <span class="archaeology-match">${match}% match</span>
+                    </div>
+                    <div class="game-meta">
+                        ${game.source === 'LUDII' ? `<div class="meta-item">🏛️ Archéologique</div>` : ''}
+                        ${game.ludiiMetadata?.origin ? `<div class="meta-item">📍 ${game.ludiiMetadata.origin}</div>` : ''}
+                        ${game.yearPublished && game.yearPublished < 500 ? `<div class="meta-item">🏺 Antique</div>` : ''}
+                    </div>
+                    ${game.description ? `<div class="game-description">${game.description.substring(0, 200)}...</div>` : ''}
+                    <div class="game-footer">
+                        <span class="source-badge archaeo">${game.source}</span>
+                        <div class="view-details archaeo">Comparer →</div>
+                    </div>
+                </div>`;
+            });
+
+            html += `</div>`;
+            html += `<div class="archaeology-note"><strong>💡 Conseils :</strong> Comparez les matériaux, vérifiez les périodes, notez les similarités.</div>`;
+        }
+
+        document.getElementById('results').innerHTML = html;
+    }
+
+    function formatYear(year) {
+        return year < 0 ? `${Math.abs(year)} av. JC` : year;
+    }
+
+    function formatArchaeologyResponse(text) {
+        let html = '';
+        const sections = [
+            { title: '🔍 Analyse de la description', regex: /1\.\s*\*?\s*Analyse de la description\*?\s*/i },
+            { title: '🤔 Hypothèses possibles', regex: /2\.\s*\*?\s*Hypothèses possibles\*?\s*/i },
+            { title: '❓ Informations manquantes', regex: /3\.\s*\*?\s*Informations manquantes\*?\s*/i }
+        ];
+
+        sections.forEach((section, idx) => {
+            const match = text.match(section.regex);
+            if (match) {
+                const start = match.index + match[0].length;
+                const nextSection = sections[idx + 1];
+                const end = nextSection && text.match(nextSection.regex) ? text.match(nextSection.regex).index : text.length;
+                const content = text.substring(start, end).trim();
+
+                html += `<div class="analysis-section"><div class="analysis-title">${section.title}</div>`;
+
+                if (idx === 1) {
+                    html += formatHypotheses(content);
+                } else {
+                    content.split('\n').filter(l => l.trim()).forEach(line => {
+                        const cleaned = line.replace(/^[-•]\s*/, '').replace(/^[a-z]\)\s*/, '').replace(/^\d+\.\s*/, '').trim();
+                        if (cleaned && !cleaned.includes('**')) {
+                            html += idx === 2 ? `<div class="missing-info">${cleaned}</div>` : `<div class="analysis-element">${cleaned}</div>`;
+                        }
+                    });
+                }
+
+                html += `</div>`;
+            }
+        });
+
+        return html || `<div class="analysis-section">${text.replace(/\n/g, '<br>')}</div>`;
+    }
+
+    function formatHypotheses(text) {
+        const patterns = [/([a-c])\)\s+(.*?)(?=(?:[a-c]\)|$))/gis, /(\d+)\.\s+(.*?)(?=(?:\d+\.|$))/gis];
+        let matches = [];
+
+        for (const pattern of patterns) {
+            let match;
+            while ((match = pattern.exec(text)) !== null) {
+                matches.push({ index: match[1], content: match[2].trim() });
+            }
+            if (matches.length > 0) break;
+        }
+
+        if (matches.length === 0) {
+            text.split('\n').filter(l => l.trim()).forEach((line, i) => {
+                if (line.trim()) matches.push({ index: String.fromCharCode(97 + i), content: line.trim() });
+            });
+        }
+
+        let html = '';
+        matches.forEach(hyp => {
+            const lines = hyp.content.split('\n').filter(l => l.trim());
+            if (lines.length === 0) return;
+
+            let confidence = '', confidenceClass = 'confidence-low', cleanedLine = lines[0];
+
+            if (lines[0].includes('🔴')) { confidence = '🔴'; confidenceClass = 'confidence-low'; cleanedLine = lines[0].replace('🔴', '').trim(); }
+            else if (lines[0].includes('🟡')) { confidence = '🟡'; confidenceClass = 'confidence-medium'; cleanedLine = lines[0].replace('🟡', '').trim(); }
+            else if (lines[0].includes('🟢')) { confidence = '🟢'; confidenceClass = 'confidence-high'; cleanedLine = lines[0].replace('🟢', '').trim(); }
+
+            let justification = '';
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].toLowerCase().includes('justification') || lines[i].includes(':')) {
+                    justification = lines[i].replace(/.*?:/, '').trim();
+                    break;
+                }
+            }
+            if (!justification && lines.length > 1) justification = lines[1].trim();
+
+            html += `
+            <div class="hypothesis-item">
+                <div class="hypothesis-name">
+                    <span>${hyp.index}) ${cleanedLine}</span>
+                    ${confidence ? `<span class="confidence-badge ${confidenceClass}">${confidence}</span>` : ''}
+                </div>
+                ${justification ? `<div class="justification"><strong>Justification :</strong> ${justification}</div>` : ''}
+            </div>`;
+        });
+
+        return html || '<div class="hypothesis-item">Aucune hypothèse</div>';
+    }
+
+    function calculateMatch(game, analysis) {
+        const desc = (game.description || '').toLowerCase();
+        const name = game.name.toLowerCase();
+        const anal = analysis.toLowerCase();
+        const query = (document.getElementById('queryInput')?.value || '').toLowerCase();
+
+        let score = 0;
+
+        const isRoman = query.includes("romain") || query.includes("rome");
+        const isEgyptian = query.includes("égypt") || query.includes("egypt");
+
+        if (isRoman) {
+            if (desc.includes("romain") || desc.includes("rome") || name.includes("latrunculorum")) score += 45;
+            else if (desc.includes("égypt") || name.includes("senet")) score -= 35;
+        }
+
+        if (isEgyptian) {
+            if (desc.includes("égypt") || desc.includes("egypt") || name.includes("senet")) score += 45;
+            else if (desc.includes("romain") || desc.includes("rome")) score -= 35;
+        }
+
+        if (anal.includes("os") && desc.includes("os")) score += 40;
+        if (anal.includes("dé") && (desc.includes("dé") || name.includes("dé"))) score += 35;
+        if (anal.includes("plateau") && desc.includes("plateau")) score += 30;
+        if (anal.includes("antique") && game.yearPublished && game.yearPublished < 500) score += 30;
+        if (game.source === 'LUDII') score += 15;
+        if (anal.includes("antique") && game.yearPublished && game.yearPublished > 1500) score -= 40;
+
+        return Math.max(20, Math.min(95, score));
+    }
+
+    async function showGameDetails(gameId, isArchaeology = false) {
         try {
             const response = await fetch(`/api/games/${gameId}`);
             const game = await response.json();
 
+            const modalHeader = document.getElementById('modalHeader');
+            modalHeader.className = isArchaeology ? 'modal-header archaeo' : 'modal-header';
             document.getElementById('modalTitle').textContent = game.name;
 
             let html = `
             <div class="metadata-grid">
-                ${game.yearPublished ? `<div class="metadata-item"><strong>Année:</strong> ${game.yearPublished < 0 ? Math.abs(game.yearPublished) + ' av. JC' : game.yearPublished}</div>` : ''}
+                ${game.yearPublished ? `<div class="metadata-item"><strong>Année:</strong> ${formatYear(game.yearPublished)}</div>` : ''}
                 ${game.averageRating ? `<div class="metadata-item"><strong>Note:</strong> ⭐ ${game.averageRating.toFixed(1)}/10</div>` : ''}
                 ${game.complexityWeight ? `<div class="metadata-item"><strong>Complexité:</strong> 🧠 ${game.complexityWeight.toFixed(1)}/5</div>` : ''}
                 ${game.minPlayers && game.maxPlayers ? `<div class="metadata-item"><strong>Joueurs:</strong> 👥 ${game.minPlayers}-${game.maxPlayers}</div>` : ''}
@@ -579,39 +886,28 @@
             </div>`;
 
             if (game.description) {
-                html += `<div class="detail-section">
+                html += `<div class="detail-section ${isArchaeology ? 'archaeo' : ''}">
                     <h3>📖 Description</h3>
                     <p>${game.description}</p>
                 </div>`;
             }
 
             if (game.wikipediaSummary) {
-                html += `<div class="detail-section wikipedia-section">
+                html += `<div class="detail-section" style="background: linear-gradient(135deg, #f0fdf4, #dcfce7) !important; border-left-color: #10b981 !important;">
                     <h3>🌐 Wikipedia</h3>
                     <p>${game.wikipediaSummary}</p>
                 </div>`;
             }
 
-            if (game.categories && game.categories.length > 0) {
-                html += `<div class="detail-section">
+            if (game.categories?.length > 0) {
+                html += `<div class="detail-section ${isArchaeology ? 'archaeo' : ''}">
                     <h3>🏷️ Catégories</h3>
                     <p>${game.categories.join(', ')}</p>
                 </div>`;
             }
 
-            if (game.bggMetadata) {
-                html += `<div class="detail-section">
-                    <h3>🎮 Informations BGG</h3>
-                    <div class="metadata-grid">
-                        ${game.bggMetadata.designers ? `<div class="metadata-item"><strong>Créateur:</strong> ${game.bggMetadata.designers}</div>` : ''}
-                        ${game.bggMetadata.catStrategy ? `<div class="metadata-item"><strong>Stratégie:</strong> ✅</div>` : ''}
-                        ${game.bggMetadata.catFamily ? `<div class="metadata-item"><strong>Familial:</strong> ✅</div>` : ''}
-                    </div>
-                </div>`;
-            }
-
             if (game.ludiiMetadata) {
-                html += `<div class="detail-section">
+                html += `<div class="detail-section archaeo">
                     <h3>🏛️ Histoire et Origine</h3>
                     <div class="metadata-grid">
                         ${game.ludiiMetadata.origin ? `<div class="metadata-item"><strong>Origine:</strong> ${game.ludiiMetadata.origin}</div>` : ''}
@@ -621,16 +917,29 @@
                 </div>`;
             }
 
-            if (game.rulesets && game.rulesets.length > 0) {
-                html += `<div class="detail-section">
+            if (game.rulesets?.length > 0) {
+                html += `<div class="detail-section ${isArchaeology ? 'archaeo' : ''}">
                     <h3>📚 Règles et Variantes</h3>
-                    ${game.rulesets.map(ruleset => `
+                    ${game.rulesets.map(r => `
                         <div class="ruleset">
-                            <h4>${ruleset.name}</h4>
-                            ${ruleset.description ? `<p><strong>Description:</strong> ${ruleset.description}</p>` : ''}
-                            ${ruleset.rules ? `<p><strong>Règles:</strong> ${ruleset.rules}</p>` : ''}
+                            <h4>${r.name}</h4>
+                            ${r.description ? `<p><strong>Description:</strong> ${r.description}</p>` : ''}
+                            ${r.rules ? `<p><strong>Règles:</strong> ${r.rules}</p>` : ''}
                         </div>
                     `).join('')}
+                </div>`;
+            }
+
+            if (isArchaeology && game.yearPublished && game.yearPublished < 500) {
+                html += `<div class="detail-section archaeo">
+                    <h3>🔍 Analyse archéologique</h3>
+                    <p><strong>Jeu antique.</strong> Pour identification précise :</p>
+                    <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                        <li>Comparez les matériaux</li>
+                        <li>Vérifiez dimensions et formes</li>
+                        <li>Examinez motifs et gravures</li>
+                        <li>Consultez un spécialiste</li>
+                    </ul>
                 </div>`;
             }
 
@@ -638,7 +947,7 @@
             document.getElementById('gameModal').style.display = 'block';
 
         } catch (error) {
-            alert('Erreur lors du chargement des détails: ' + error.message);
+            alert('Erreur : ' + error.message);
         }
     }
 
@@ -647,16 +956,11 @@
     }
 
     window.onclick = function(event) {
-        const modal = document.getElementById('gameModal');
-        if (event.target === modal) {
-            closeModal();
-        }
+        if (event.target === document.getElementById('gameModal')) closeModal();
     }
 
     document.getElementById('queryInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            performSearch();
-        }
+        if (e.key === 'Enter') performSearch();
     });
 </script>
 </body>

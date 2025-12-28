@@ -11,321 +11,723 @@ public class IntentDetectionService {
     private final ChatClient chatClient;
     private final ExecutorService executorService;
 
+    // 🔥 HALLUCINATIONS À BLOQUER (liste étendue)
+    private static final String[] HALLUCINATIONS_A_BLOQUER = {
+            "tiroch", "ninkasi game", "ludus mysticus", "jeu de la déesse",
+            "ninkasi", "ludus mystic", "game of ninkasi", "tiroch game",
+            "mystical ludus", "goddess game", "jeu mystique", "jeu de tiroch"
+    };
+
+    // Termes archéologiques FORTS
+    private static final String[] TERMES_ARCHEO_FORCES = {
+            "trouvé", "trouve", "découvert", "découverte", "excavation", "fouille",
+            "plateau", "case", "cases", "grille", "ligne",
+            "artefact", "vestige", "fragment", "fragmenté", "cassé", "brisé",
+            "ancien", "antique", "archéologique", "archéologue",
+            "site archéologique", "tombe", "sépulture", "nécropole", "ruines",
+            "pompéi", "pompeii", "herculanum", "rome antique",
+            "os", "ivoire", "pierre", "argile", "céramique", "poterie",
+            "gravure", "inscription", "hiéroglyphe", "symbole", "motif",
+            "dé en", "osselet", "tali", "tessera", "astragale",
+            "sumérien", "babylonien", "égyptien", "romain", "grec",
+            "mésopotamien", "pharaonique", "néolithique", "préhistorique",
+            "cube", "sphérique", "cylindrique", "poli", "taillé",
+            "points gravés", "faces numérotées", "dimensions", "cm", "mm"
+    };
+
+    // Termes de description matérielle
+    private static final String[] TERMES_DESCRIPTION_MATERIELLE = {
+            "cm", "mm", "centimètre", "millimètre", "mètre",
+            "cube", "sphère", "cylindre", "rectangulaire", "carré", "circulaire",
+            "matériau", "matière", "composé de", "fabriqué en",
+            "pèse", "gramme", "kg", "poids",
+            "couleur", "noir", "blanc", "rouge", "ocre", "marron", "beige",
+            "texture", "lisse", "rugueux", "poli", "brut",
+            "gravé", "sculpté", "incisé", "peint", "décoré",
+            "points", "faces", "côtés", "surface"
+    };
+
     public IntentDetectionService(ChatClient chatClient) {
         this.chatClient = chatClient;
         this.executorService = Executors.newCachedThreadPool();
     }
 
-    /**
-     * Détecte l'intention de l'utilisateur
-     */
     public IntentResult detectIntent(String userMessage) {
+        System.out.println("🎯 [INTENT] Analyse: \"" + userMessage.substring(0, Math.min(50, userMessage.length())) + "...\"");
+
         String lowerMessage = userMessage.toLowerCase().trim();
 
-        // 1. SALUTATIONS ET CONVERSATIONS COURANTES
-        if (isGreetingOrSmallTalk(lowerMessage)) {
-            return new IntentResult(
-                    IntentType.GREETING,
-                    generateConversationalResponse(lowerMessage)
-            );
+        // ===== PRIORITÉ 1 : HALLUCINATIONS (BLOQUAGE IMMÉDIAT) =====
+        for (String hallucination : HALLUCINATIONS_A_BLOQUER) {
+            if (lowerMessage.contains(hallucination)) {
+                System.out.println("🚨 [INTENT] ⚠️ HALLUCINATION DÉTECTÉE ET BLOQUÉE: " + hallucination);
+                String warningMessage = generateHallucinationWarning(hallucination);
+                return new IntentResult(IntentType.HALLUCINATION_BLOCKED, warningMessage);
+            }
         }
 
-        // 2. QUESTIONS GÉNÉRALES (pas de jeu spécifique)
-        if (isGeneralQuestion(lowerMessage)) {
-            return new IntentResult(
-                    IntentType.GENERAL_QUESTION,
-                    null
-            );
+        // ===== PRIORITÉ 2 : SALUTATIONS =====
+        if (isGreetingOrSmallTalk(userMessage)) {
+            System.out.println("👋 [INTENT] Salutation détectée");
+            return new IntentResult(IntentType.GREETING, generateConversationalResponse(lowerMessage));
         }
 
-        // 3. RECHERCHE DE JEU (par défaut)
+        // ===== PRIORITÉ 3 : DESCRIPTION ARCHÉOLOGIQUE =====
+        boolean isArchaeological = isArchaeologicalDescription(lowerMessage);
+
+        if (isArchaeological) {
+            System.out.println("🏛️ [INTENT] 🔍 DESCRIPTION ARCHÉOLOGIQUE DÉTECTÉE");
+            return new IntentResult(IntentType.ARCHAEOLOGICAL_IDENTIFICATION, null);
+        }
+
+        // ===== PRIORITÉ 4 : QUESTIONS THÉORIQUES =====
+        if (isTheoreticalQuestion(userMessage)) {
+            System.out.println("💭 [INTENT] Question théorique détectée");
+            return new IntentResult(IntentType.THEORETICAL_QUESTION, null);
+        }
+
+        // ===== PRIORITÉ 5 : RECHERCHE DE JEUX =====
+        System.out.println("🎮 [INTENT] Recherche de jeu");
         return new IntentResult(IntentType.GAME_SEARCH, null);
     }
 
-    /**
-     * Détecte si c'est une salutation ou petite conversation
-     */
-    private boolean isGreetingOrSmallTalk(String message) {
-        // Salutations simples
-        String[] greetings = {
-                "bonjour", "bonsoir", "salut", "hello", "hi", "hey",
-                "coucou", "bonne journée", "bonne soirée", "yo"
+    // ===== GÉNÉRATION AVERTISSEMENT HALLUCINATION =====
+    private String generateHallucinationWarning(String term) {
+        return String.format("""
+            🚫 **Terme non documenté détecté** : "%s"
+            
+            ⚠️ **Attention** : Ce terme ne correspond à aucun jeu historique documenté dans les sources archéologiques reconnues.
+            
+            **Jeux antiques authentifiés :**
+            
+            📚 **Égypte ancienne** (-3000 à -332)
+            • Senet : Jeu de parcours à 30 cases
+            • Mehen : Plateau en spirale représentant un serpent
+            • Chiens et Chacals : Jeu de course à 58 trous
+            
+            📚 **Mésopotamie** (-2600 à -539)
+            • Royal Game of Ur : 20 cases, 2 joueurs
+            • Jeu des Vingt Cases
+            
+            📚 **Rome antique** (-753 à 476)
+            • Ludus latrunculorum : Jeu de stratégie (ancêtre des échecs)
+            • Tesserae : Dés en os/ivoire à 6 faces
+            • Duodecim Scripta : Jeu de course à 3 lignes
+            
+            📚 **Grèce antique** (-800 à -146)
+            • Petteia : Jeu de stratégie abstrait
+            • Astragales : Osselets (ancêtres des dés)
+            
+            📚 **Civilisation Viking** (793-1066)
+            • Hnefatafl : Jeu de stratégie asymétrique
+            
+            💡 **Recommandations :**
+            • Consultez un archéologue professionnel pour authentification
+            • Vérifiez les sources académiques (British Museum, Louvre, publications scientifiques)
+            • Recherchez dans les bases de données archéologiques certifiées
+            
+            ℹ️ Si vous cherchez un jeu historique réel, reformulez votre recherche avec un nom documenté.
+            """, term);
+    }
+
+    // ===== DÉTECTION DESCRIPTION ARCHÉOLOGIQUE (AMÉLIORÉE) =====
+    private boolean isArchaeologicalDescription(String message) {
+        String lowerMessage = message.toLowerCase();
+
+        // Critère 1 : Description matérielle détaillée (NOUVEAU)
+        int descCount = 0;
+        for (String terme : TERMES_DESCRIPTION_MATERIELLE) {
+            if (lowerMessage.contains(terme)) {
+                descCount++;
+            }
+        }
+
+        if (descCount >= 3) {
+            System.out.println("🔍 [INTENT-ARCH] Description matérielle détectée (" + descCount + " termes)");
+            return true;
+        }
+
+        // Critère 2 : Termes archéologiques forts
+        int forceCount = 0;
+        for (String terme : TERMES_ARCHEO_FORCES) {
+            if (lowerMessage.contains(terme)) {
+                forceCount++;
+            }
+        }
+
+        if (forceCount >= 2) {
+            System.out.println("🎯 [INTENT-ARCH] " + forceCount + " termes archéo forts détectés");
+            return true;
+        }
+
+        // Critère 3 : Patterns archéologiques spécifiques
+        String[] archaeologicalPatterns = {
+                "j'ai trouvé.*(os|pierre|argile|bois|ivoire)",
+                "nous avons découvert.*(jeu|artefact|objet)",
+                "découvert à.*(pompéi|rome|égypte|grèce)",
+                "trouvé dans.*(tombe|sépulture|fouille|site)",
+                "description.*(ancien|antique|archéologique)",
+                "ressemble à un.*(dé|jeu|plateau)",
+                "pourrait être.*(jeu|artefact)",
+                "matériau.*(os|ivoire|pierre|argile)",
+                "forme.*(carré|rond|cube|cylindrique)",
+                "dimension.*(cm|mm|centimètre)",
+                "gravé.*(motif|inscription|symbole|points)",
+                "objet.*(antique|ancien|archéologique)",
+                "cube en (pierre|os|argile|ivoire)",
+                "points gravés", "faces numérotées"
         };
 
-        for (String greeting : greetings) {
-            if (message.equals(greeting) ||
-                    message.startsWith(greeting + " ") ||
-                    message.startsWith(greeting + "!") ||
-                    message.startsWith(greeting + ".") ||
-                    message.startsWith(greeting + ",")) {
+        for (String pattern : archaeologicalPatterns) {
+            if (lowerMessage.matches(".*" + pattern + ".*")) {
+                System.out.println("🎯 [INTENT-ARCH] Pattern archéo détecté: " + pattern);
                 return true;
             }
         }
 
-        // Small talk (conversations courantes)
+        // Critère 4 : Description longue avec contexte archéologique
+        if (message.length() > 80) {
+            String[] contextTerms = {
+                    "site", "fouille", "excavation", "archéologue",
+                    "musée", "collection", "découverte", "vestige"
+            };
+
+            int contextCount = 0;
+            for (String term : contextTerms) {
+                if (lowerMessage.contains(term)) contextCount++;
+            }
+
+            if (contextCount >= 2 && descCount >= 2) {
+                System.out.println("🎯 [INTENT-ARCH] Description longue avec contexte archéologique");
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // ===== DÉTECTION QUESTIONS THÉORIQUES =====
+    private boolean isTheoreticalQuestion(String message) {
+        String lower = message.toLowerCase().trim();
+
+        // Vérification : Si la question mentionne des jeux spécifiques, ce n'est PAS théorique
+        if (containsMultipleKnownGames(lower)) {
+            System.out.println("🎮 [INTENT] Question comparative entre jeux spécifiques → GAME_SEARCH");
+            return false;
+        }
+
+        // Questions théoriques/conceptuelles
+        String[] theoreticalPatterns = {
+                "c'est quoi la relation entre", "qu'est-ce que la relation entre",
+                "relation entre", "lien entre", "différence entre",
+                "histoire des jeux", "évolution des jeux", "origine des jeux",
+                "classification des jeux", "types de jeux", "catégories de jeux",
+                "comment sont créés", "l'importance des jeux", "rôle des jeux",
+                "impact des jeux", "pourquoi les jeux", "comment les jeux",
+                "qu'est-ce qu'un jeu", "définition de jeu", "qu'est ce que un jeu",
+                "comment.*évolué", "évolution.*histoire", "évolution.*à travers",
+                "transformation.*jeux", "développement.*historique",
+                "comment.*changé", "comment.*devenu", "changement.*historique"
+        };
+
+        for (String pattern : theoreticalPatterns) {
+            if (lower.contains(pattern) || lower.matches(".*" + pattern + ".*")) {
+                return true;
+            }
+        }
+
+        // Questions "c'est quoi" sur sujets généraux
+        if (lower.matches("^c'est quoi (l[ae]s? |d[eu]s? |un |une )?.*") ||
+                lower.matches("^qu'est-ce que (l[ae]s? |d[eu]s? |un |une )?.*")) {
+
+            String afterStarter = lower
+                    .replaceFirst("^c'est quoi (l[ae]s? |d[eu]s? |un |une )?", "")
+                    .replaceFirst("^qu'est-ce que (l[ae]s? |d[eu]s? |un |une )?", "");
+
+            String[] generalTopics = {
+                    "histoire", "évolution", "origine", "classification",
+                    "importance", "rôle", "impact", "définition", "concept",
+                    "relation", "lien", "différence"
+            };
+
+            for (String topic : generalTopics) {
+                if (afterStarter.contains(topic)) {
+                    System.out.println("💡 [INTENT] Question théorique (sujet général: " + topic + ")");
+                    return true;
+                }
+            }
+
+            if (!containsKnownGameName(afterStarter)) {
+                System.out.println("💡 [INTENT] Question théorique (pas de jeu connu)");
+                return true;
+            }
+        }
+
+        // Questions larges sans jeu spécifique
+        String[] broadQuestions = {
+                "meilleurs jeux", "top jeux", "jeux recommand",
+                "quels jeux", "quelles sont", "liste des jeux",
+                "exemples de jeux", "types de stratégie"
+        };
+
+        for (String pattern : broadQuestions) {
+            if (lower.contains(pattern)) {
+                System.out.println("💡 [INTENT] Question théorique (question large)");
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // ===== DÉTECTION NOM DE JEU CONNU =====
+    private boolean containsKnownGameName(String text) {
+        String[] knownGames = {
+                "catan", "pandemic", "chess", "échecs", "go", "senet",
+                "monopoly", "scrabble", "cluedo", "risk", "azul",
+                "ticket to ride", "carcassonne", "7 wonders", "dominion",
+                "puerto rico", "agricola", "terra mystica", "twilight struggle",
+                "war of the ring", "gloomhaven", "spirit island", "wingspan",
+                "root", "scythe", "brass birmingham", "ark nova", "mehen",
+                "royal game of ur", "petteia", "ludus latrunculorum",
+                "hnefatafl", "duodecim scripta", "tesserae"
+        };
+
+        for (String game : knownGames) {
+            if (text.contains(" " + game + " ") ||
+                    text.startsWith(game + " ") ||
+                    text.endsWith(" " + game) ||
+                    text.equals(game)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // ===== DÉTECTION MULTIPLES JEUX CONNUS =====
+    private boolean containsMultipleKnownGames(String text) {
+        String[] knownGames = {
+                "catan", "pandemic", "chess", "échecs", "go", "senet",
+                "monopoly", "scrabble", "cluedo", "risk", "azul",
+                "ticket to ride", "carcassonne", "7 wonders", "dominion",
+                "puerto rico", "agricola", "terra mystica", "twilight struggle",
+                "war of the ring", "gloomhaven", "spirit island", "wingspan",
+                "root", "scythe", "brass birmingham", "ark nova", "mehen",
+                "royal game of ur", "petteia", "ludus latrunculorum"
+        };
+
+        int gameCount = 0;
+
+        for (String game : knownGames) {
+            if (text.contains(" " + game + " ") ||
+                    text.startsWith(game + " ") ||
+                    text.endsWith(" " + game) ||
+                    text.equals(game)) {
+                gameCount++;
+                if (gameCount >= 2) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // ===== SALUTATIONS =====
+    private boolean isGreetingOrSmallTalk(String message) {
+        String trimmed = message.trim().toLowerCase();
+
+        String[] exactGreetings = {
+                "bonjour", "bonsoir", "salut", "hello", "hi", "hey",
+                "bonjour!", "salut!", "hello!", "hi!", "ça va", "cava", "cv",
+                "tu vas bien", "vas bien", "comment ça va", "comment ca va",
+                "comment vas-tu", "comment allez-vous", "comment tu vas",
+                "bien ou bien", "sava", "ça va ?", "cava ?"
+        };
+
+        for (String greeting : exactGreetings) {
+            if (trimmed.equals(greeting) || trimmed.equals(greeting + "?")) {
+                return true;
+            }
+        }
+
         String[] smallTalkPatterns = {
-                "tu vas bien", "ça va", "ca va", "comment vas-tu", "comment allez-vous",
-                "tu vas bien?", "ça va?", "ca va?", "comment ça va", "comment ca va",
-                "quoi de neuf", "comment tu vas", "tu fais quoi",
-                "merci", "merci beaucoup", "super", "cool", "ok", "d'accord",
-                "au revoir", "à bientôt", "bye", "ciao", "à plus"
+                "tu vas", "vas-tu", "allez-vous", "comment tu", "comment ça",
+                "quoi de neuf", "quoi de neuf ?", "quoi de nouveau",
+                "ça roule", "ca roule", "comment c'est", "comment c est"
         };
 
         for (String pattern : smallTalkPatterns) {
-            if (message.equals(pattern) ||
-                    message.contains(pattern + "?") ||
-                    message.contains(pattern + " ")) {
+            if (trimmed.contains(pattern) && trimmed.length() < 25) {
                 return true;
             }
+        }
+
+        if (trimmed.contains("merci") && trimmed.length() < 30) {
+            return true;
         }
 
         return false;
     }
 
-    /**
-     * Détecte si c'est une question générale
-     */
-    private boolean isGeneralQuestion(String message) {
-        // Pattern 1: Questions commençant par des mots interrogatifs
-        String[] questionStarters = {
-                "comment", "pourquoi", "quelle", "quel", "quels", "quelles",
-                "qu'est-ce", "qu'est ce", "qui", "où", "quand", "combien"
-        };
-
-        for (String starter : questionStarters) {
-            if (message.startsWith(starter + " ")) {
-                // Vérifier qu'il n'y a PAS de nom de jeu spécifique juste après
-                if (!containsSpecificGameNameNearStart(message)) {
-                    return true;
-                }
-            }
-        }
-
-        // Pattern 2: Phrases contenant des mots-clés de questions générales
-        String[] generalKeywords = {
-                "relation entre", "différence entre", "lien entre",
-                "histoire des jeux", "origine des jeux", "évolution des jeux",
-                "types de jeux", "catégories de jeux", "classification",
-                "influence", "impact", "rôle", "importance",
-                "peux-tu", "peux tu", "pourrais-tu", "peux-tu me",
-                "explique-moi", "dis-moi", "parle-moi", "raconte-moi"
-        };
-
-        for (String keyword : generalKeywords) {
-            if (message.contains(keyword)) {
-                // Si la question parle de jeux en général (pas d'un jeu spécifique)
-                if (!containsSpecificGameName(message) ||
-                        isAboutGamesInGeneral(message)) {
-                    return true;
-                }
-            }
-        }
-
-        // Pattern 3: Questions avec "?" à la fin et pas de nom de jeu spécifique
-        if (message.endsWith("?") && message.length() > 20) {
-            if (!containsSpecificGameName(message)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Vérifie si la question parle des jeux en général
-     */
-    private boolean isAboutGamesInGeneral(String message) {
-        String[] generalGameTerms = {
-                "jeux de société", "jeux de plateau", "jeux de cartes",
-                "jeux vidéo", "les jeux", "ces jeux", "certains jeux",
-                "jeux modernes", "jeux anciens", "jeux classiques",
-                "histoire du jeu", "origine du jeu", "évolution du jeu"
-        };
-
-        for (String term : generalGameTerms) {
-            if (message.contains(term)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Vérifie si un nom de jeu spécifique est près du début (20 premiers chars)
-     */
-    private boolean containsSpecificGameNameNearStart(String message) {
-        if (message.length() < 20) {
-            return containsSpecificGameName(message);
-        }
-
-        String start = message.substring(0, Math.min(30, message.length()));
-        return containsSpecificGameName(start);
-    }
-
-    /**
-     * Vérifie si le message contient un nom de jeu spécifique
-     */
-    private boolean containsSpecificGameName(String message) {
-        String[] commonGames = {
-                " chess ", " échecs ", " go ", " senet ", " monopoly ", " scrabble ",
-                " catan ", " risk ", " cluedo ", " azul ", " ticket to ride ",
-                " pandemic ", " 7 wonders ", " splendor ", " dominion ",
-                " uno ", " poker ", " bridge ", " tarot ", " belote "
-        };
-
-        // Ajouter des espaces pour éviter les faux positifs
-        String spacedMessage = " " + message + " ";
-
-        for (String game : commonGames) {
-            if (spacedMessage.contains(game)) {
-                // Vérifier si c'est utilisé dans un contexte général
-                // Ex: "l'histoire du jeu d'échecs" vs "les règles des échecs"
-                if (isUsedInGeneralContext(message, game.trim())) {
-                    return false; // Pas considéré comme recherche spécifique
-                }
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Vérifie si le jeu est mentionné dans un contexte général/théorique
-     */
-    private boolean isUsedInGeneralContext(String message, String gameName) {
-        // Si la phrase parle de l'histoire, de l'origine, de l'influence du jeu
-        // C'est une question théorique, pas une recherche de jeu
-        String[] theoreticalContexts = {
-                "histoire de", "histoire du", "origine de", "origine du",
-                "évolution de", "évolution du", "influence de", "influence du",
-                "impact de", "impact du", "rôle de", "rôle du",
-                "comment l'", "comment le", "pourquoi le", "pourquoi l'"
-        };
-
-        for (String context : theoreticalContexts) {
-            if (message.contains(context)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Génère une réponse conversationnelle adaptée
-     */
     private String generateConversationalResponse(String message) {
-        message = message.toLowerCase().trim();
-
-        // Réponses pour "tu vas bien?" et variantes
-        if (message.contains("tu vas bien") || message.contains("ça va") || message.contains("ca va") ||
-                message.contains("comment vas-tu") || message.contains("comment allez-vous")) {
-            String[] responses = {
-                    "Je vais très bien, merci ! 😊 Prêt à vous aider à découvrir des jeux passionnants. Et vous ?",
-                    "Ça va super bien ! 🎲 J'ai hâte de vous parler de jeux de société. Que puis-je faire pour vous ?",
-                    "Parfaitement bien, merci de demander ! 🎯 Vous cherchez des infos sur un jeu en particulier ?"
-            };
-            return responses[ThreadLocalRandom.current().nextInt(responses.length)];
-        }
-
-        // Réponses pour "merci"
         if (message.contains("merci")) {
-            String[] responses = {
-                    "Avec plaisir ! 😊 N'hésitez pas si vous avez d'autres questions.",
-                    "De rien ! 🎲 Je suis là pour ça.",
-                    "Content d'avoir pu vous aider ! 🎯 À votre service pour toute autre question."
-            };
-            return responses[ThreadLocalRandom.current().nextInt(responses.length)];
+            return "Avec plaisir ! 😊 N'hésitez pas si vous avez d'autres questions sur les jeux.";
         }
-
-        // Réponses pour "au revoir"
-        if (message.contains("au revoir") || message.contains("bye") || message.contains("à bientôt") ||
-                message.contains("ciao") || message.contains("à plus")) {
-            String[] responses = {
-                    "Au revoir ! 👋 À très bientôt pour de nouvelles découvertes ludiques !",
-                    "À bientôt ! 🎲 N'hésitez pas à revenir quand vous voulez.",
-                    "Bonne journée ! 🎯 À la prochaine pour parler jeux de société !"
-            };
-            return responses[ThreadLocalRandom.current().nextInt(responses.length)];
+        if (message.contains("bonsoir")) {
+            return "Bonsoir ! 👋 Comment puis-je vous aider concernant les jeux de société ?";
         }
-
-        // Salutations par défaut
-        String[] defaultResponses = {
-                "Bonjour ! 👋 Je suis votre assistant spécialisé en jeux de société. Comment puis-je vous aider aujourd'hui ?",
-                "Salut ! 🎲 Ravi de vous voir. Vous cherchez des informations sur un jeu en particulier ?",
-                "Hello ! 🎯 Prêt à découvrir de nouveaux jeux de société ? Que puis-je faire pour vous ?"
-        };
-
-        return defaultResponses[ThreadLocalRandom.current().nextInt(defaultResponses.length)];
+        return "Bonjour ! 👋 Je suis spécialiste des jeux de société. Comment puis-je vous aider ?";
     }
 
-    /**
-     * Génère une réponse pour une question générale
-     */
-    public String generateGeneralResponse(String question) {
-        System.out.println("💬 [QUESTION GÉNÉRALE] Génération réponse...");
+    // ===== GÉNÉRATION RÉPONSE THÉORIQUE =====
+    public String generateTheoreticalResponse(String question) {
+        System.out.println("💭 [QUESTION THÉORIQUE] Génération pour: " + question);
 
         try {
             CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
-                return askOllamaGeneral(question);
+                return askOllamaTheoretical(question);
             }, executorService);
 
-            String response = future.get(10, TimeUnit.SECONDS);
-            System.out.println("✅ [QUESTION GÉNÉRALE] Réponse générée");
+            String response = future.get(20, TimeUnit.SECONDS);
+
+            if (response == null || response.trim().isEmpty()) {
+                return generateTheoreticalFallback(question);
+            }
+
+            System.out.println("✅ [QUESTION THÉORIQUE] Réponse générée (" + response.length() + " caractères)");
             return response;
 
         } catch (TimeoutException e) {
-            System.err.println("⏰ TIMEOUT sur question générale");
-            return "Je réfléchis trop longtemps... Pouvez-vous reformuler votre question ?";
+            System.err.println("⏰ [QUESTION THÉORIQUE] Timeout");
+            return generateTheoreticalFallback(question);
         } catch (Exception e) {
-            System.err.println("❌ Erreur: " + e.getMessage());
-            return "Désolé, j'ai du mal à répondre à cette question. Pouvez-vous la reformuler ?";
+            System.err.println("❌ [QUESTION THÉORIQUE] Erreur: " + e.getMessage());
+            return generateTheoreticalFallback(question);
         }
     }
 
-    /**
-     * Demande à Ollama de répondre à une question générale
-     */
-    private String askOllamaGeneral(String question) {
+    private String askOllamaTheoretical(String question) {
         String prompt = String.format("""
-            Tu es un expert en jeux de société qui répond de manière conversationnelle.
+            Tu es un expert en histoire et théorie des jeux de société.
             
-            Question de l'utilisateur : "%s"
+            Question de l'utilisateur: %s
             
-            INSTRUCTIONS :
-            - Réponds EN FRANÇAIS de manière naturelle et engageante
-            - Si c'est une question sur les jeux en général, donne une réponse informative
-            - Sois conversationnel, amical et précis
-            - 2-3 paragraphes maximum
-            - Si tu ne sais pas, sois honnête
+            Réponds de manière:
+            1. Conceptuelle et pédagogique
+            2. Avec exemples concrets de jeux historiques
+            3. Avec contexte historique et évolution
+            4. En citant des catégories de jeux si pertinent
             
-            RÉPONDS DIRECTEMENT EN FRANÇAIS :
+            Ton ton est naturel, amical et professionnel, comme ChatGPT.
+            Réponse en français, 200-400 mots maximum.
             """, question);
 
         try {
-            return chatClient.prompt()
-                    .user(prompt)
-                    .call()
-                    .content();
+            return chatClient.prompt().user(prompt).call().content();
         } catch (Exception e) {
-            throw new RuntimeException("Ollama error: " + e.getMessage());
+            throw new RuntimeException("Erreur Ollama: " + e.getMessage());
         }
     }
 
-    /**
-     * Type d'intention
-     */
-    public enum IntentType {
-        GREETING,
-        GENERAL_QUESTION,
-        GAME_SEARCH
+    private String generateTheoreticalFallback(String question) {
+        String lowerQuestion = question.toLowerCase();
+
+        if (lowerQuestion.contains("meilleurs") || lowerQuestion.contains("top") ||
+                lowerQuestion.contains("recommand")) {
+
+            return """
+                🏆 **Recommandations de jeux de société**
+                
+                **Par complexité:**
+                
+                📘 **Simples** (1-2/5)
+                • Carcassonne - Placement de tuiles, 2-5 joueurs, 30-45min
+                • Azul - Collection de tuiles, 2-4 joueurs, 30-45min
+                • Ticket to Ride - Trains, 2-5 joueurs, 30-60min
+                
+                📙 **Moyens** (3/5)
+                • Catan - Colonisation, 3-4 joueurs, 60-120min
+                • 7 Wonders - Civilisation, 2-7 joueurs, 30min
+                • Dominion - Deck-building, 2-4 joueurs, 30min
+                
+                📕 **Complexes** (4-5/5)
+                • Twilight Struggle - Guerre froide, 2 joueurs, 180min
+                • Terra Mystica - Fantastique, 2-5 joueurs, 60-150min
+                • Gloomhaven - Tactique/RPG, 1-4 joueurs, 60-120min
+                
+                **Par catégorie:**
+                • **Stratégie**: Chess, Go, Terra Mystica
+                • **Familial**: Carcassonne, Ticket to Ride, Azul
+                • **Coopératif**: Pandemic, Forbidden Island, Spirit Island
+                • **Party**: Codenames, Dixit, Decrypto
+                
+                💡 **Conseil**: Cherchez un jeu spécifique pour plus de détails !
+                """;
+        }
+
+        if (lowerQuestion.contains("histoire") || lowerQuestion.contains("évolution") ||
+                lowerQuestion.contains("origine")) {
+
+            return """
+                📚 **Histoire des jeux de société**
+                
+                **🏺 Antiquité** (-3000 à 500)
+                • **Senet** (Égypte, -3000): Jeu de parcours religieux, 30 cases
+                • **Royal Game of Ur** (Mésopotamie, -2600): Jeu de course
+                • **Mehen** (Égypte, -3000): Plateau en spirale
+                • **Ludus latrunculorum** (Rome): Stratégie militaire
+                • **Petteia** (Grèce): Stratégie abstraite
+                
+                **⚔️ Moyen Âge** (500-1500)
+                • **Chess** (Inde/Perse, ~600): Stratégie abstraite
+                • **Go** (Chine, -2000): Contrôle territorial
+                • **Hnefatafl** (Vikings, 400-1000): Stratégie asymétrique
+                
+                **🎭 Ère moderne** (1900-1980)
+                • **Monopoly** (1935): Économie et propriété
+                • **Risk** (1957): Conquête mondiale
+                • **Diplomacy** (1959): Négociation stratégique
+                • **Scrabble** (1948): Jeu de lettres
+                
+                **🎲 Ère contemporaine** (1980-aujourd'hui)
+                • **Catan** (1995): Nouvelle vague de jeux allemands
+                • **Pandemic** (2008): Coopératif moderne
+                • **Gloomhaven** (2017): Campagne tactique immersive
+                • **Wingspan** (2019): Jeu naturaliste
+                
+                **📊 Évolution majeure:**
+                Passage de jeux abstraits anciens (Chess, Go) aux jeux thématiques modernes avec mécaniques complexes.
+                """;
+        }
+
+        return String.format("""
+            📖 **Réponse théorique**
+            
+            **Question:** "%s"
+            
+            Les jeux de société ont évolué depuis l'Antiquité avec plusieurs grandes familles:
+            
+            **🏺 Jeux antiques:**
+            • Senet, Mehen (Égypte)
+            • Royal Game of Ur (Mésopotamie)
+            • Chess, Go (Asie)
+            • Ludus latrunculorum (Rome)
+            
+            **🎯 Classification moderne:**
+            • **Abstraits**: Chess, Go, Othello
+            • **Stratégie**: Catan, Twilight Struggle, Terra Mystica
+            • **Familiaux**: Carcassonne, Azul, Ticket to Ride
+            • **Coopératifs**: Pandemic, Spirit Island
+            • **Party**: Codenames, Dixit, Decrypto
+            
+            **📈 Tendances actuelles:**
+            • Mécaniques innovantes (deck-building, placement d'ouvriers)
+            • Thèmes immersifs et narratifs
+            • Jeux solo et coopératifs
+            • Campagnes longues (legacy games)
+            
+            💡 **Pour plus d'informations:** Posez une question plus spécifique ou cherchez un jeu précis !
+            """, question);
     }
 
-    /**
-     * Résultat de la détection d'intention
-     */
+    // ===== ANALYSE ARCHÉOLOGIQUE POUR IDENTIFIER LE JEU =====
+    public String generateArchaeologicalAnalysis(String description) {
+        System.out.println("🏛️ [ARCHÉOLOGIE] Identification du jeu antique");
+
+        try {
+            CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+                return identifyAncientGame(description);
+            }, executorService);
+
+            String response = future.get(25, TimeUnit.SECONDS);
+
+            if (response == null || response.trim().isEmpty() || response.length() < 100) {
+                System.err.println("⚠️ [ARCHÉOLOGIE] Réponse insuffisante → Fallback");
+                return generateArchaeologicalFallback(description);
+            }
+
+            System.out.println("✅ [ARCHÉOLOGIE] Identification générée");
+            return response;
+
+        } catch (TimeoutException e) {
+            System.err.println("⏰ [ARCHÉOLOGIE] Timeout après 25s");
+            return generateArchaeologicalFallback(description);
+        } catch (Exception e) {
+            System.err.println("❌ [ARCHÉOLOGIE] Erreur: " + e.getMessage());
+            return generateArchaeologicalFallback(description);
+        }
+    }
+
+    // 🔥 NOUVEAU : IDENTIFICATION DU JEU ANTIQUE
+    private String identifyAncientGame(String description) {
+        String shortDesc = description.length() > 400
+                ? description.substring(0, 400) + "..."
+                : description;
+
+        String prompt = String.format("""
+            TU ES ARCHÉOLOGUE SPÉCIALISTE DES JEUX ANTIQUES.
+            
+            UN ARCHÉOLOGUE TE DÉCRIT UN OBJET TROUVÉ :
+            "%s"
+            
+            TA MISSION : L'aider à identifier à quel JEU ANTIQUE cet objet pourrait appartenir.
+            
+            === JEUX ANTIQUES CONNUS (pour référence) ===
+            
+            🏺 **ÉGYPTE ANCIENNE** :
+            • Senet : 30 cases, bâtonnets, pions coniques, -3000 av. J.-C.
+            • Mehen : plateau spiralé, pions lions, -3000 av. J.-C.
+            • Chiens et Chacals : 58 trous, bâtonnets tête de chien
+            
+            🏛️ **ROME ANTIQUE** :
+            • Tesserae : dés cubiques 6 faces (os/ivoire), points 1-6
+            • Duodecim Scripta : 3 lignes × 12 cases, ancêtre backgammon
+            • Ludus latrunculorum : grille stratégique, pions ronds
+            • Tali : dés allongés 4 faces (osselets)
+            
+            🏺 **MÉSOPOTAMIE** :
+            • Royal Game of Ur : 20 cases, dés tétraédriques, -2600 av. J.-C.
+            
+            ⚔️ **VIKINGS** :
+            • Hnefatafl : plateau 11×11 ou 9×9, stratégie asymétrique
+            
+            🇬🇷 **GRÈCE ANTIQUE** :
+            • Petteia : stratégie sur grille, pions similaires aux dames
+            • Astragales : osselets comme dés
+            
+            === TON ANALYSE DOIT SUIVRE CE PLAN ===
+            
+            🎯 **1. HYPOTHÈSE D'IDENTIFICATION**
+            - Jeu antique le plus probable : [NOM]
+            - Niveau de confiance : Élevé/Moyen/Faible
+            - Raison principale : [pourquoi ce jeu ?]
+            
+            🔍 **2. COMPARAISON AVEC LA DESCRIPTION**
+            ✅ **Ce qui correspond :**
+            • [élément 1 de la description] → [fait connu du jeu]
+            • [élément 2] → [fait connu]
+            
+            ⚠️ **Ce qui ne correspond pas/manuelquant :**
+            • [différence ou information absente]
+            • [ce qu'il faudrait vérifier]
+            
+            📖 **3. CE QU'ON SAIT DE CE JEU**
+            - Origine : [civilisation, période]
+            - Règles reconstituées : [2-3 phrases]
+            - Où le voir : [musée célèbre]
+            - Particularités : [ce qui le rend unique]
+            
+            🔬 **4. COMMENT ÊTRE SÛR À 100%%**
+            - Vérification 1 : [action concrète]
+            - Vérification 2 : [action concrète]
+            - Expert à consulter : [spécialiste]
+            - Analyse recommandée : [technique scientifique]
+            
+            💡 **5. SI CE N'EST PAS CE JEU...**
+            - Autre possibilité : [nom du jeu]
+            - Pourquoi moins probable : [raison]
+            - Différence clé : [élément distinctif]
+            
+            === TON STYLE ===
+            • Professionnel mais accessible
+            • Précis : donne des faits vérifiables
+            • Honnête : indique les incertitudes
+            • Utile : conseils pratiques
+            
+            === IMPORTANT ===
+            • Base-toi uniquement sur l'archéologie documentée
+            • Ne parle PAS de jeux modernes
+            • Ne donne PAS de certitude absolue sans preuve
+            
+            GÉNÈRE TA RÉPONSE MAINTENANT :
+            """, shortDesc);
+
+        try {
+            String response = chatClient.prompt()
+                    .user(prompt)
+                    .call()
+                    .content();
+
+            // Vérification que la réponse mentionne un jeu antique connu
+            String lowerResponse = response.toLowerCase();
+            if (lowerResponse.contains("senet") || lowerResponse.contains("ur") ||
+                    lowerResponse.contains("mehen") || lowerResponse.contains("tessera") ||
+                    lowerResponse.contains("hnefatafl") || lowerResponse.contains("latrunculorum") ||
+                    lowerResponse.contains("duodecim") || lowerResponse.contains("petteia")) {
+                return response;
+            } else {
+                System.err.println("⚠️ [ARCHÉOLOGIE] Aucun jeu antique identifié");
+                return generateArchaeologicalFallback(description);
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur identification: " + e.getMessage());
+        }
+    }
+
+    // 🔥 FALLBACK AMÉLIORÉ POUR ARCHÉOLOGIE
+    private String generateArchaeologicalFallback(String description) {
+        String shortDesc = description.length() > 200
+                ? description.substring(0, 200) + "..."
+                : description;
+
+        return String.format("""
+            🔍 **ANALYSE ARCHÉOLOGIQUE PRÉLIMINAIRE**
+            
+            **Description reçue :**
+            "%s"
+            
+            **STATUT :** Identification incertaine
+            
+            **PROBLÈME :** La description ne permet pas d'identifier un jeu antique spécifique avec certitude.
+            
+            **JEUX ANTIQUES À CONSIDÉRER :**
+            
+            1. 🎲 **SI C'EST UN DÉ/CUBE :**
+               • **Tesserae romaines** : dés cubiques 6 faces, points 1-6
+               • **Tali** : dés allongés 4 faces, utilisés pour paris
+            
+            2. 🏺 **SI C'EST UN PLATEAU :**
+               • **Senet** (Égypte) : 30 cases rectangulaires
+               • **Royal Game of Ur** (Mésopotamie) : 20 cases avec décoration
+               • **Hnefatafl** (Vikings) : plateau carré 11×11 ou 9×9
+            
+            3. ♟️ **SI CE SONT DES PIONS :**
+               • Chercher le plateau correspondant
+               • Les pions seuls sont difficiles à identifier
+            
+            **INFORMATIONS CRITIQUES MANQUANTES :**
+            1. 📏 **Dimensions exactes** (en mm, pas en cm)
+            2. ⚒️ **Matériau précis** (type de pierre, os de quel animal ?)
+            3. 🎨 **Marquages/décors** (points, lignes, symboles)
+            4. 🏺 **Contexte archéologique** (site, strate, objets autour)
+            
+            **ACTIONS IMMÉDIATES :**
+            1. 📸 Prendre 5 photos sous différents angles avec une règle
+            2. 🏛️ Contacter le musée d'archéologie le plus proche
+            3. 📚 Consulter : "Board Games in Antiquity" (Finkel)
+            
+            **EXPERTISE REQUISE :**
+            • Archéologue spécialisé en jeux antiques
+            • Laboratoire de datation (C14 si matière organique)
+            • Musée avec collection de jeux antiques
+            
+            **NOTE :** Seulement ~20 jeux antiques sont bien documentés.
+            Votre découverte pourrait être très importante !
+            """, shortDesc);
+    }
+
+    // ===== ENUM ET CLASSES =====
+    public enum IntentType {
+        GREETING,
+        THEORETICAL_QUESTION,
+        GAME_SEARCH,
+        ARCHAEOLOGICAL_IDENTIFICATION,
+        HALLUCINATION_BLOCKED
+    }
+
     public static class IntentResult {
         private final IntentType type;
         private final String directResponse;
@@ -335,16 +737,8 @@ public class IntentDetectionService {
             this.directResponse = directResponse;
         }
 
-        public IntentType getType() {
-            return type;
-        }
-
-        public String getDirectResponse() {
-            return directResponse;
-        }
-
-        public boolean hasDirectResponse() {
-            return directResponse != null;
-        }
+        public IntentType getType() { return type; }
+        public String getDirectResponse() { return directResponse; }
+        public boolean hasDirectResponse() { return directResponse != null; }
     }
 }
