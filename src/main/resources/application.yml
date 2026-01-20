@@ -8,14 +8,26 @@ spring:
       database: boardgames
 
   ai:
+    # ✅ on force la génération via openai (Groq) et embeddings via ollama
+    model:
+      chat: openai
+      embedding: ollama
+
+    # Embedding local (Ollama)
     ollama:
       base-url: http://localhost:11434
-      chat:
-        options:
-          model: mistral
       embedding:
         options:
           model: nomic-embed-text
+
+    # Chat online (Groq via OpenAI compatible)
+    openai:
+      base-url: https://api.groq.com/openai
+      api-key: ${GROQ_API_KEY}
+      chat:
+        options:
+          model: llama-3.1-8b-instant
+          temperature: 0.2
 
 server:
   port: 8081
@@ -30,5 +42,6 @@ rag:
   collection: boardgames
   top-k: 5
 
-ollama:
-  host: http://localhost:11434
+wikipedia:
+  base-url: https://fr.wikipedia.org/w/api.php
+  user-agent: "hafsaelmadani24@gmail.com"

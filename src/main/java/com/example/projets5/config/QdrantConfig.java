@@ -16,7 +16,11 @@ public class QdrantConfig {
             @Value("${qdrant.api-key:}") String apiKey
     ) {
         QdrantGrpcClient.Builder b = QdrantGrpcClient.newBuilder(host, port, false);
-        if (apiKey != null && !apiKey.isBlank()) b = b.withApiKey(apiKey);
+
+        if (apiKey != null && !apiKey.isBlank()) {
+            b = b.withApiKey(apiKey.trim());
+        }
+
         return new QdrantClient(b.build());
     }
 }

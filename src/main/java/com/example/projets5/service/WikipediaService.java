@@ -26,10 +26,10 @@ public class WikipediaService {
     private HttpHeaders headers() {
         HttpHeaders h = new HttpHeaders();
         h.set("User-Agent", userAgent);
+        h.setAccept(java.util.List.of(MediaType.APPLICATION_JSON));
         return h;
     }
 
-    /** Cherche un titre pertinent pour une requête (jeu historique, contexte, etc.) */
     public String searchTitle(String query) {
         try {
             String q = URLEncoder.encode(query, StandardCharsets.UTF_8);
@@ -43,9 +43,11 @@ public class WikipediaService {
                     new HttpEntity<>(headers()),
                     Map.class
             );
+
             Object queryObj = resp.getBody().get("query");
             if (!(queryObj instanceof Map)) return null;
             Object search = ((Map<?, ?>) queryObj).get("search");
+
             if (search instanceof java.util.List<?> list && !list.isEmpty()) {
                 Object first = list.get(0);
                 if (first instanceof Map<?, ?> m && m.get("title") != null) {
@@ -58,7 +60,6 @@ public class WikipediaService {
         }
     }
 
-    /** Récupère l’extrait (intro) d’un article Wikipédia par titre. */
     public String getExtract(String title) {
         if (title == null || title.isBlank()) return null;
         try {
@@ -73,15 +74,15 @@ public class WikipediaService {
                     new HttpEntity<>(headers()),
                     Map.class
             );
+
             Object queryObj = resp.getBody().get("query");
             if (!(queryObj instanceof Map)) return null;
             Map<?, ?> pages = (Map<?, ?>) ((Map<?, ?>) queryObj).get("pages");
+
             for (Object k : pages.keySet()) {
                 Map<?, ?> page = (Map<?, ?>) pages.get(k);
                 Object extract = page.get("extract");
-                if (extract != null) {
-                    return String.valueOf(extract);
-                }
+                if (extract != null) return String.valueOf(extract);
             }
             return null;
         } catch (Exception e) {
