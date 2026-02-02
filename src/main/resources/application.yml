@@ -4,18 +4,18 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://localhost:27017/boardgames
+      uri: mongodb://mongo:27017/boardgames
       database: boardgames
 
   ai:
-    # ✅ on force la génération via openai (Groq) et embeddings via ollama
+    # on force la génération via openai (Groq) et embeddings via ollama
     model:
       chat: openai
       embedding: ollama
 
     # Embedding local (Ollama)
     ollama:
-      base-url: http://localhost:11434
+      base-url: http://ollama:11434
       embedding:
         options:
           model: nomic-embed-text
@@ -34,7 +34,7 @@ server:
 
 qdrant:
   grpc:
-    host: localhost
+    host: qdrant
     port: 6334
   api-key: ""
 
@@ -44,4 +44,4 @@ rag:
 
 wikipedia:
   base-url: https://fr.wikipedia.org/w/api.php
-  user-agent: "hafsaelmadani24@gmail.com"
+  user-agent: ${WIKI_USER_AGENT}

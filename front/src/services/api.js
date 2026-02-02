@@ -1,17 +1,13 @@
-import axios from 'axios';
+import axios from "axios";
 
-// Base = le @RequestMapping du contrôleur
-const API_BASE_URL = 'http://localhost:8081/api/games';
+const apiClient = axios.create({
+  baseURL: "/api",
+  headers: { "Content-Type": "application/json" },
+});
 
 export const api = {
-  // Appel au système RAG (endpoint /ask)
   async searchRag(question, filters = {}) {
-    const body = {
-      question,  // doit correspondre à QueryDTO.question
-      filters,   // doit correspondre à QueryDTO.filters (peut être {})
-    };
-
-    const response = await axios.post(`${API_BASE_URL}/ask`, body);
-    return response.data; // GameResponseDTO
+    const response = await apiClient.post("/games/ask", { question, filters });
+    return response.data;
   },
 };

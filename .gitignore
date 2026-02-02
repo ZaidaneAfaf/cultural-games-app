@@ -1,33 +1,26 @@
-HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+### Node / Front ###
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+coverage/
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+### Env / secrets ###
+.env
+.env.*
+*.env
+*.key
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
+### Data dumps (Mongo/Qdrant backups) ###
+dump_boardgames/
+**/dump_boardgames/
+*.bson
+*.metadata.json
+*.gz
+*.zip
+*.tar
+*.tar.gz
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
-.vscode/
+### Logs ###
+logs/
+*.log

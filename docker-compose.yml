@@ -1,0 +1,55 @@
+services:
+  frontend:
+    build:
+      context: ./front
+    container_name: projets5-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+
+  backend:
+    build:
+      context: .
+    container_name: projets5-backend
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      WIKI_USER_AGENT: ${WIKI_USER_AGENT}
+    depends_on:
+      - mongo
+      - qdrant
+      - ollama
+
+  mongo:
+    image: mongo:7
+    container_name: projets5-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: projets5-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: projets5-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+volumes:
+  mongo_data:
+  qdrant_data:
+  ollama_data:
