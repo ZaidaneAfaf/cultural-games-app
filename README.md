@@ -30,9 +30,47 @@ Puis modifier les variables suivantes dans le fichier `.env` :
 ```env
 GROQ_API_KEY=YOUR_KEY_HERE
 WIKI_USER_AGENT=projetS5/1.0 (contact@example.com)
-
+```
 # 3. Lancer le projet
 Depuis la racine du projet, exécuter la commande suivante :
-
+````
 docker compose up -d --build
+````
+# 4. Restaurer la base vectorielle (Snapshot Qdrant)
+
+Le projet utilise un **snapshot Qdrant contenant les embeddings des jeux de société**.
+
+### Télécharger le snapshot
+
+Télécharger le snapshot compressé :
+
+👉 [Download Snapshot](snapshots/boardgames.snapshot.zip)
+
+Après téléchargement, **décompresser le fichier** pour obtenir :
+boardgames.snapshot
+
+---
+
+##  Importer le snapshot dans Qdrant
+
+Ouvrir le dashboard Qdrant :
+http://localhost:6333/dashboard#/collections/
+
+Puis suivre les étapes :
+
+1. Aller dans **Collections**
+2. Cliquer sur **Upload Snapshot**
+3. Importer le fichier :
+boardgames.snapshot
+
+Une fois importé, la collection **boardgames** sera automatiquement restaurée.
+
+---
+
+##  Tester l'application
+
+Une fois les services lancés, ouvrir le frontend : http://localhost:3000/
+
+Vous pouvez maintenant poser des questions sur les jeux de société et tester les capacités du système RAG.
+
 
