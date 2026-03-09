@@ -44,7 +44,7 @@ Le projet utilise un **snapshot Qdrant contenant les embeddings des jeux de soci
 
 Télécharger le snapshot compressé :
 
-👉 [Download Snapshot]([snapshots/boardgames.snapshot.zip](https://github.com/ZaidaneAfaf/cultural-games-app/archive/refs/tags/v1.0.zip))
+👉 [Download Snapshot](https://github.com/ZaidaneAfaf/cultural-games-app/archive/refs/tags/v1.0.zip)
 
 Après téléchargement, **décompresser le fichier** pour obtenir :
 boardgames.snapshot
